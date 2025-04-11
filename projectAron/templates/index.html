@@ -3,71 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Candidate Finder</title>
+    <title>Candidate Finder | Professional Matching System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2258/2258764.png" type="image/png">
+    <meta name="description" content="Find the perfect candidates for your job openings using AI-powered matching system">
 </head>
 <body>
     <div class="page-wrapper">
         {% if user %}
-        <div class="user-info">
-            <i class="fas fa-user"></i> {{ user }}
+        <div class="user-controls">
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i> {{ user }}
+            </div>
+            <a href="{{ url_for('logout') }}" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
-        <a href="{{ url_for('logout') }}" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
         {% endif %}
         
         <div class="container">
-            <h1><i class="fas fa-search"></i> Candidate Finder</h1>
+            <h1><i class="fas fa-brain"></i> AI Candidate Finder</h1>
             
             <form id="candidates-form">
                 <div class="form-group">
-                    <label for="spreadsheet_name">Database name:</label>
-                    <input type="text" id="spreadsheet_name" name="spreadsheet_name" required placeholder="Enter Google Sheet name">
+                    <label for="spreadsheet_name"><i class="fas fa-database"></i> Database name:</label>
+                    <input type="text" id="spreadsheet_name" name="spreadsheet_name" required 
+                           placeholder="Enter your Google Sheet name" autocomplete="off">
                     <div class="form-info-icon">
                         <i class="fas fa-info-circle"></i>
-                        <span class="form-info-tooltip">Enter the exact name of your Google Sheet document</span>
+                        <span class="form-info-tooltip">Enter the exact name of your Google Sheet document containing candidate data</span>
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="sheet_names">Select sheets:</label>
+                    <label for="sheet_names"><i class="fas fa-table"></i> Select sheets:</label>
                     <select id="sheet_names" name="sheet_names" multiple required>
-                        <!-- Las opciones serán añadidas dinámicamente -->
+                        <!-- Dynamic options will be added here -->
+                        <option disabled>Enter database name first</option>
                     </select>
                     <div class="form-info-icon">
                         <i class="fas fa-info-circle"></i>
-                        <span class="form-info-tooltip">Hold Ctrl/Cmd to select multiple sheets</span>
+                        <span class="form-info-tooltip">Hold Ctrl/Cmd to select multiple sheets. Each sheet should contain candidate information.</span>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="top_n">Number of Candidates (Top N):</label>
-                    <input type="number" id="top_n" name="top_n" min="1" value="5" required>
+                    <label for="top_n"><i class="fas fa-trophy"></i> Number of Candidates (Top N):</label>
+                    <input type="number" id="top_n" name="top_n" min="1" max="100" value="5" required>
                     <div class="form-info-icon">
                         <i class="fas fa-info-circle"></i>
-                        <span class="form-info-tooltip">How many candidates you want to retrieve</span>
+                        <span class="form-info-tooltip">The system will return this number of best matching candidates</span>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="job_description">Job Description:</label>
-                    <textarea id="job_description" name="job_description" rows="6" required placeholder="Paste job description here..."></textarea>
+                    <label for="job_description"><i class="fas fa-briefcase"></i> Job Description:</label>
+                    <textarea id="job_description" name="job_description" rows="6" required 
+                              placeholder="Paste detailed job description here..."></textarea>
                     <div class="form-info-icon">
                         <i class="fas fa-info-circle"></i>
-                        <span class="form-info-tooltip">The more detailed the job description, the better the matching results</span>
+                        <span class="form-info-tooltip">Include all job requirements, skills, and qualifications. The more detailed the description, the better the matching results.</span>
                     </div>
                 </div>
 
-                <button type="submit"><i class="fas fa-search"></i> Find Matching Candidates</button>
+                <button type="submit" id="find-btn">
+                    <i class="fas fa-search"></i> Find Matching Candidates
+                </button>
             </form>
 
             <div class="loader" id="loader">
                 <div class="loader-spinner"></div>
-                <p>Finding the best candidates. This may take a minute...</p>
+                <p>Finding the best candidates for your position. This may take a minute...</p>
             </div>
 
             <div id="result">
-                <!-- Aquí aparecerá la URL del resultado -->
+                <!-- Results will appear here -->
             </div>
         </div>
     </div>
@@ -79,6 +88,7 @@
             const sheetNamesSelect = document.getElementById('sheet_names');
             const resultDiv = document.getElementById('result');
             const loaderDiv = document.getElementById('loader');
+            const findBtn = document.getElementById('find-btn');
 
             // Escucha cuando el usuario ingresa un nombre de hoja de cálculo
             spreadsheetNameInput.addEventListener('input', function() {
@@ -88,15 +98,25 @@
                 
                 // Si el campo de nombre de hoja de cálculo no está vacío, consulta las hojas
                 if (spreadsheetName) {
+                    sheetNamesSelect.disabled = true;
+                    sheetNamesSelect.innerHTML = '<option disabled>Loading sheets...</option>';
+                    
                     // Show loader
                     loaderDiv.style.display = 'block';
                     
                     // Llama al backend para obtener las hojas correspondientes a la base de datos
-                    fetch(`/get_sheets/${spreadsheetName}`)  // Usando la ruta dinámica
-                        .then(response => response.json())
+                    fetch(`/get_sheets/${spreadsheetName}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
                         .then(data => {
                             loaderDiv.style.display = 'none';
+                            sheetNamesSelect.disabled = false;
                             sheetNamesSelect.innerHTML = ''; // Limpiar opciones anteriores
+                            
                             if (data.sheets && data.sheets.length > 0) {
                                 data.sheets.forEach(sheet => {
                                     const option = document.createElement('option');
@@ -104,26 +124,41 @@
                                     option.textContent = sheet;
                                     sheetNamesSelect.appendChild(option);
                                 });
+                                
+                                // Select first option by default
+                                sheetNamesSelect.options[0].selected = true;
                             } else {
                                 // If no sheets are found, show error message
-                                resultDiv.innerHTML = "<p><i class='fas fa-exclamation-circle'></i> No sheets were found for this database.</p>";
+                                resultDiv.innerHTML = "<p><i class='fas fa-exclamation-triangle'></i> No sheets were found for this database.</p>";
                                 resultDiv.className = 'error-result';
+                                sheetNamesSelect.innerHTML = '<option disabled>No sheets available</option>';
                             }
                         })
                         .catch(error => {
                             loaderDiv.style.display = 'none';
-                            resultDiv.innerHTML = `<p><i class='fas fa-exclamation-circle'></i> Error fetching sheets: ${error}</p>`;
+                            sheetNamesSelect.disabled = false;
+                            resultDiv.innerHTML = `<p><i class='fas fa-exclamation-triangle'></i> Error fetching sheets: ${error.message}</p>`;
                             resultDiv.className = 'error-result';
+                            sheetNamesSelect.innerHTML = '<option disabled>Error loading sheets</option>';
                         });
                 } else {
                     // If the database name is empty, show error message
-                    sheetNamesSelect.innerHTML = ''; // Clear the options
-                    resultDiv.innerHTML = "<p><i class='fas fa-exclamation-circle'></i> Please enter a database name.</p>";
+                    sheetNamesSelect.innerHTML = '<option disabled>Enter database name first</option>';
+                    sheetNamesSelect.disabled = true;
+                    resultDiv.innerHTML = "<p><i class='fas fa-exclamation-triangle'></i> Please enter a database name.</p>";
                     resultDiv.className = 'error-result';
                 }
             });
+            
+            // Añadir efecto al botón de búsqueda
+            findBtn.addEventListener('mouseover', function() {
+                this.classList.add('pulse');
+            });
+            
+            findBtn.addEventListener('mouseout', function() {
+                this.classList.remove('pulse');
+            });
         };
-
 
         // Enviar el formulario para obtener los candidatos
         document.getElementById('candidates-form').addEventListener('submit', function(event) {
@@ -131,6 +166,11 @@
             
             const resultDiv = document.getElementById('result');
             const loaderDiv = document.getElementById('loader');
+            const findBtn = document.getElementById('find-btn');
+            
+            // Disable button and change text
+            findBtn.disabled = true;
+            findBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
             
             // Show loader and clear previous results
             loaderDiv.style.display = 'block';
@@ -143,20 +183,33 @@
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server error: ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
                 loaderDiv.style.display = 'none';
+                findBtn.disabled = false;
+                findBtn.innerHTML = '<i class="fas fa-search"></i> Find Matching Candidates';
+                
                 if (data.url) {
-                    resultDiv.innerHTML = `<p><i class='fas fa-check-circle'></i> The candidates have been processed. <a href="${data.url}" target="_blank">See the candidate sheet <i class='fas fa-external-link-alt'></i></a></p>`;
+                    resultDiv.innerHTML = `
+                        <p><i class='fas fa-check-circle'></i> Success! The AI has identified the best matching candidates.</p>
+                        <a href="${data.url}" target="_blank">View Candidate Results <i class='fas fa-external-link-alt'></i></a>
+                    `;
                     resultDiv.className = 'success-result';
                 } else {
-                    resultDiv.innerHTML = `<p><i class='fas fa-exclamation-circle'></i> Error: ${data.error}</p>`;
+                    resultDiv.innerHTML = `<p><i class='fas fa-exclamation-triangle'></i> Error: ${data.error}</p>`;
                     resultDiv.className = 'error-result';
                 }
             })
             .catch(error => {
                 loaderDiv.style.display = 'none';
-                resultDiv.innerHTML = `<p><i class='fas fa-exclamation-circle'></i> Error: ${error}</p>`;
+                findBtn.disabled = false;
+                findBtn.innerHTML = '<i class="fas fa-search"></i> Find Matching Candidates';
+                resultDiv.innerHTML = `<p><i class='fas fa-exclamation-triangle'></i> Error: ${error.message}</p>`;
                 resultDiv.className = 'error-result';
             });
         });

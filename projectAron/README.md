@@ -38,27 +38,60 @@ Esta aplicación web permite encontrar candidatos adecuados para un puesto basá
 
 ## Deployment a Heroku
 
-1. Crear una aplicación en Heroku:
+1. Asegúrate de tener los siguientes archivos en la raíz de tu proyecto:
+   - `Procfile`: Contiene el comando para iniciar la aplicación
+   - `requirements.txt`: Lista todas las dependencias
+   - `runtime.txt` (opcional): Especifica la versión de Python
+
+2. Instala Heroku CLI y loguéate:
+   ```
+   heroku login
+   ```
+
+3. Inicializa un repositorio Git si aún no lo has hecho:
+   ```
+   git init
+   git add .
+   git commit -m "Initial commit"
+   ```
+
+4. Crear una aplicación en Heroku:
    ```
    heroku create tu-app-name
    ```
 
-2. Configurar variables de entorno:
+5. Configurar variables de entorno:
    ```
    heroku config:set SECRET_KEY=your_secret_key
    heroku config:set AUTHORIZED_USERS=user1@example.com,user2@example.com
    ```
 
-3. Configurar las credenciales de Google:
+6. Configurar las credenciales de Google:
    ```
-   heroku config:set GOOGLE_CREDENTIALS=$(cat credenciales.json)
-   heroku config:set GOOGLE_CLIENT_SECRETS=$(cat client_secrets.json)
+   heroku config:set GOOGLE_CREDENTIALS="$(cat credenciales.json)"
+   heroku config:set GOOGLE_CLIENT_SECRETS="$(cat client_secrets.json)"
    ```
 
-4. Deploy a Heroku:
+7. Deploy a Heroku:
    ```
    git push heroku main
    ```
+   
+   Si tu rama principal es "master" en lugar de "main", usa:
+   ```
+   git push heroku master
+   ```
+
+8. Verifica que la aplicación se haya inicializado correctamente:
+   ```
+   heroku logs --tail
+   ```
+
+## Solución de problemas comunes de Heroku
+
+- **Error de detección de buildpack**: Asegúrate de tener un archivo `requirements.txt` válido en la raíz.
+- **Error H10 (App crashed)**: Revisa los logs con `heroku logs --tail` para ver el error específico.
+- **Error R10 (Boot timeout)**: Tu aplicación tarda demasiado en iniciar, revisa posibles bloqueos.
 
 ## Contribución
 

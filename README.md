@@ -10,6 +10,19 @@ Esta es una versión optimizada y ligera que:
 - Procesa archivos en memoria para reducir el uso de disco
 - Usa TF-IDF y similitud de coseno en lugar de embeddings neuronales
 
+## Soluciones a errores comunes
+
+### Error de importación de Werkzeug
+Si encuentras un error como `ImportError: cannot import name 'url_quote' from 'werkzeug.urls'`:
+
+1. Este error se debe a incompatibilidades de versiones entre Flask y Werkzeug
+2. La solución es fijar versiones específicas en el archivo requirements.txt:
+   ```
+   flask==2.0.1
+   werkzeug==2.0.1
+   ```
+3. Después de actualizar, vuelve a desplegar la aplicación
+
 ## Estructura del Proyecto
 
 ```
@@ -79,10 +92,22 @@ Malka/
    git push heroku main
    ```
 
-9. Abre la aplicación:
+9. Si necesitas solucionar problemas después del despliegue:
    ```
-   heroku open
+   heroku logs --tail
    ```
+
+10. Actualizar la aplicación después de realizar cambios:
+    ```
+    git add .
+    git commit -m "Mensaje de actualización"
+    git push heroku master
+    ```
+
+11. Abre la aplicación:
+    ```
+    heroku open
+    ```
 
 ## Desarrollo Local
 

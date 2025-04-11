@@ -1,0 +1,17 @@
+flask==2.0.1
+gspread==5.0.0
+oauth2client==4.1.3
+pandas==1.3.3
+google-auth==2.3.0
+google-auth-oauthlib==0.4.6
+google-auth-httplib2==0.1.0
+google-api-python-client==2.25.0
+PyMuPDF==1.19.1
+python-docx==0.8.11
+gunicorn==20.1.0
+
+# Versión más ligera de sentence-transformers y dependencias
+sentence-transformers==2.2.2
+# URL específica para PyTorch CPU-only (mucho más pequeño)
+https://download.pytorch.org/whl/cpu/torch-1.11.0%2Bcpu-cp39-cp39-linux_x86_64.whl
+# No incluir torchvision si no es estrictamente necesario

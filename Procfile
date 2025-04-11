@@ -1,1 +1,1 @@
-web: gunicorn projectAron.appServer:app
+web: gunicorn projectAron.appServer_light:app

@@ -1,0 +1,28 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Sensitive data (rename your real credentials file before committing)
+credenciales.json
+client_secrets.json
+
+# Local development
+.env
+
+# Temporary files
+temp_*.pdf
+temp_*.docx
+
+# IDE files
+.vscode/
+.idea/
+
+# Database
+*.db
+*.sqlite3

@@ -1,55 +1,35 @@
 # Aplicación de Búsqueda de Candidatos
 
-Esta aplicación web permite encontrar candidatos adecuados para un puesto basándose en descripciones de trabajo y perfiles de candidatos utilizando IA.
+Esta aplicación web permite encontrar candidatos adecuados para un puesto basándose en descripciones de trabajo y perfiles de candidatos utilizando técnicas de procesamiento de texto.
+
+## Sobre la versión optimizada
+
+Esta es una versión optimizada y ligera que:
+- Usa scikit-learn en lugar de sentence-transformers y PyTorch
+- Reemplaza PyMuPDF con PyPDF2 (más ligero)
+- Procesa archivos en memoria para reducir el uso de disco
+- Usa TF-IDF y similitud de coseno en lugar de embeddings neuronales
 
 ## Estructura del Proyecto
 
 ```
 Malka/
 ├── Procfile                    # Comando para iniciar la aplicación en Heroku
-├── requirements.txt            # Dependencias del proyecto
+├── requirements.txt            # Dependencias del proyecto (versión ligera)
 ├── runtime.txt                 # Versión de Python para Heroku
-├── setup.py                    # Configuración del paquete Python
-├── MANIFEST.in                 # Archivos a incluir en el paquete
 ├── projectAron/                # Directorio principal de la aplicación
 │   ├── __init__.py             # Convierte projectAron en un paquete Python
-│   ├── appServer.py            # Servidor Flask
-│   ├── codigoARONconIA.py      # Lógica de la aplicación
+│   ├── appServer.py            # Servidor Flask original
+│   ├── appServer_simple.py     # Servidor Flask optimizado para Heroku
+│   ├── codigoARONconIA.py      # Lógica original con IA avanzada
+│   ├── codigoARON_simple.py    # Lógica simplificada para Heroku
 │   ├── credenciales.json       # Credenciales para Google APIs
 │   ├── static/                 # Archivos estáticos (CSS, JS)
 │   │   └── style.css
 │   └── templates/              # Plantillas HTML
-│       └── index.html
+│       ├── index.html          # Página principal
+│       └── login.html          # Formulario de login
 ```
-
-## Problema con el tamaño de la aplicación en Heroku
-
-La aplicación utiliza bibliotecas de machine learning (sentence-transformers, torch) que son muy pesadas, lo que hace que el tamaño total supere el límite de 500MB que permite Heroku en su plan gratuito.
-
-### Opciones para resolver el problema:
-
-#### Opción 1: Usar Heroku-Buildpack-Apt para instalar dependencias
-```
-heroku buildpacks:add --index 1 heroku-community/apt
-```
-Crea un archivo `Aptfile` en la raíz con las dependencias necesarias.
-
-#### Opción 2: Reducir el tamaño de las dependencias
-Modifica `requirements.txt` para usar versiones más ligeras:
-```
-# Usa una versión más ligera de transformers
-transformers==4.18.0
-sentence-transformers==2.2.2
-
-# Especifica solo CPU para PyTorch para reducir tamaño
-https://download.pytorch.org/whl/cpu/torch-1.11.0%2Bcpu-cp39-cp39-linux_x86_64.whl
-https://download.pytorch.org/whl/cpu/torchvision-0.12.0%2Bcpu-cp39-cp39-linux_x86_64.whl
-```
-
-#### Opción 3: Usar plataformas alternativas
-- **Render**: Soporta aplicaciones más grandes
-- **PythonAnywhere**: Buena para aplicaciones de Python
-- **Google Cloud Run**: Permite contenedores Docker personalizados
 
 ## Despliegue en Heroku
 
@@ -58,7 +38,7 @@ https://download.pytorch.org/whl/cpu/torchvision-0.12.0%2Bcpu-cp39-cp39-linux_x8
    cd c:\Users\Hernan\Desktop\TRABAJO\Malka
    ```
 
-2. Inicializa un repositorio Git:
+2. Inicializa un repositorio Git (si aún no lo has hecho):
    ```
    git init
    ```
@@ -66,7 +46,7 @@ https://download.pytorch.org/whl/cpu/torchvision-0.12.0%2Bcpu-cp39-cp39-linux_x8
 3. Agrega todos los archivos al repositorio:
    ```
    git add .
-   git commit -m "Initial commit"
+   git commit -m "Versión optimizada para Heroku"
    ```
 
 4. Crea una aplicación en Heroku:
@@ -80,12 +60,17 @@ https://download.pytorch.org/whl/cpu/torchvision-0.12.0%2Bcpu-cp39-cp39-linux_x8
    heroku config:set AUTHORIZED_USERS=user1@example.com,user2@example.com
    ```
 
-6. Especifica manualmente el buildpack de Python:
+6. Si tienes las credenciales como archivo JSON, configúralas como variable de entorno:
+   ```
+   heroku config:set GOOGLE_CREDENTIALS="$(cat credenciales.json)"
+   ```
+
+7. Especifica manualmente el buildpack de Python:
    ```
    heroku buildpacks:set heroku/python
    ```
 
-7. Despliega la aplicación:
+8. Despliega la aplicación:
    ```
    git push heroku master
    ```
@@ -94,22 +79,10 @@ https://download.pytorch.org/whl/cpu/torchvision-0.12.0%2Bcpu-cp39-cp39-linux_x8
    git push heroku main
    ```
 
-8. Para solucionar problemas, revisa los logs:
+9. Abre la aplicación:
    ```
-   heroku logs --tail
+   heroku open
    ```
-
-## Alternativa: Despliegue en Render.com
-
-1. Crea una cuenta en Render.com
-2. Selecciona "New Web Service"
-3. Conecta tu repositorio de GitHub
-4. Configura el servicio:
-   - Runtime: Python 3.9
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `gunicorn projectAron.appServer:app`
-5. Configura las variables de entorno igual que en Heroku
-6. Haz clic en "Create Web Service"
 
 ## Desarrollo Local
 
@@ -122,13 +95,5 @@ https://download.pytorch.org/whl/cpu/torchvision-0.12.0%2Bcpu-cp39-cp39-linux_x8
 
 2. Ejecuta la aplicación:
    ```
-   python -m projectAron.appServer
+   python -m projectAron.appServer_simple
    ```
-
-## Solución para reducir el tamaño de la aplicación
-
-Para hacer que la aplicación sea compatible con Heroku, podemos:
-
-1. Usar modelos de embeddings más pequeños
-2. Cargar modelos desde HuggingFace en tiempo de ejecución en lugar de instalarlos
-3. Implementar un enfoque de API donde los cálculos pesados se realicen en otro servicio

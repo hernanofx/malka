@@ -1,1 +1,1 @@
-web: gunicorn projectAron.appServer_light:app
+web: gunicorn --workers=1 projectAron.appServer_simple:app

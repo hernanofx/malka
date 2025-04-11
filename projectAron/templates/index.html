@@ -3,38 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Candidatos</title>
+    <title>Candidate Finder</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     {% if user %}
     <div class="user-info">
-        Logged in as: {{ user }}
+        <i class="fas fa-user"></i> {{ user }}
     </div>
-    <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    <a href="{{ url_for('logout') }}" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
     {% endif %}
     
     <div class="container">
-        <h1>Get Candidates</h1>
+        <h1><i class="fas fa-search"></i> Candidate Finder</h1>
         
         <form id="candidates-form">
+            <div class="form-group">
+                <label for="spreadsheet_name">Database name:</label>
+                <input type="text" id="spreadsheet_name" name="spreadsheet_name" required placeholder="Enter Google Sheet name">
+                <div class="form-info-icon">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="form-info-tooltip">Enter the exact name of your Google Sheet document</span>
+                </div>
+            </div>
             
-            <label for="spreadsheet_name">Database name:</label>
-            <input type="text" id="spreadsheet_name" name="spreadsheet_name" required>
-            
-            <label for="sheet_names">Select sheets:</label>
-            <select id="sheet_names" name="sheet_names" multiple required>
-                <!-- Las opciones serán añadidas dinámicamente -->
-            </select>
+            <div class="form-group">
+                <label for="sheet_names">Select sheets:</label>
+                <select id="sheet_names" name="sheet_names" multiple required>
+                    <!-- Las opciones serán añadidas dinámicamente -->
+                </select>
+                <div class="form-info-icon">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="form-info-tooltip">Hold Ctrl/Cmd to select multiple sheets</span>
+                </div>
+            </div>
 
-            <label for="top_n">Number of Candidates (Top N):</label>
-            <input type="number" id="top_n" name="top_n" min="1" required>
+            <div class="form-group">
+                <label for="top_n">Number of Candidates (Top N):</label>
+                <input type="number" id="top_n" name="top_n" min="1" value="5" required>
+                <div class="form-info-icon">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="form-info-tooltip">How many candidates you want to retrieve</span>
+                </div>
+            </div>
 
-            <label for="job_description">Job Description:</label>
-            <textarea id="job_description" name="job_description" rows="6" required></textarea>
+            <div class="form-group">
+                <label for="job_description">Job Description:</label>
+                <textarea id="job_description" name="job_description" rows="6" required placeholder="Paste job description here..."></textarea>
+                <div class="form-info-icon">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="form-info-tooltip">The more detailed the job description, the better the matching results</span>
+                </div>
+            </div>
 
-            <button type="submit">Get Candidates</button>
+            <button type="submit"><i class="fas fa-search"></i> Find Matching Candidates</button>
         </form>
+
+        <div class="loader" id="loader">
+            <div class="loader-spinner"></div>
+            <p>Finding the best candidates. This may take a minute...</p>
+        </div>
 
         <div id="result">
             <!-- Aquí aparecerá la URL del resultado -->
@@ -47,17 +76,24 @@
             const spreadsheetNameInput = document.getElementById('spreadsheet_name');
             const sheetNamesSelect = document.getElementById('sheet_names');
             const resultDiv = document.getElementById('result');
+            const loaderDiv = document.getElementById('loader');
 
             // Escucha cuando el usuario ingresa un nombre de hoja de cálculo
             spreadsheetNameInput.addEventListener('input', function() {
                 const spreadsheetName = spreadsheetNameInput.value.trim();
                 resultDiv.innerHTML = '';
+                resultDiv.className = '';
+                
                 // Si el campo de nombre de hoja de cálculo no está vacío, consulta las hojas
                 if (spreadsheetName) {
+                    // Show loader
+                    loaderDiv.style.display = 'block';
+                    
                     // Llama al backend para obtener las hojas correspondientes a la base de datos
                     fetch(`/get_sheets/${spreadsheetName}`)  // Usando la ruta dinámica
                         .then(response => response.json())
                         .then(data => {
+                            loaderDiv.style.display = 'none';
                             sheetNamesSelect.innerHTML = ''; // Limpiar opciones anteriores
                             if (data.sheets && data.sheets.length > 0) {
                                 data.sheets.forEach(sheet => {
@@ -68,16 +104,20 @@
                                 });
                             } else {
                                 // If no sheets are found, show error message
-                                resultDiv.innerHTML = "<p style='color: red;'>No sheets were found for this database.</p>";
+                                resultDiv.innerHTML = "<p><i class='fas fa-exclamation-circle'></i> No sheets were found for this database.</p>";
+                                resultDiv.className = 'error-result';
                             }
                         })
                         .catch(error => {
-                            resultDiv.innerHTML = `<p style='color: red;'>Error fetching sheets: ${error}</p>`;
+                            loaderDiv.style.display = 'none';
+                            resultDiv.innerHTML = `<p><i class='fas fa-exclamation-circle'></i> Error fetching sheets: ${error}</p>`;
+                            resultDiv.className = 'error-result';
                         });
                 } else {
                     // If the database name is empty, show error message
                     sheetNamesSelect.innerHTML = ''; // Clear the options
-                    resultDiv.innerHTML = "<p style='color: red;'>Please enter a database name.</p>";
+                    resultDiv.innerHTML = "<p><i class='fas fa-exclamation-circle'></i> Please enter a database name.</p>";
+                    resultDiv.className = 'error-result';
                 }
             });
         };
@@ -87,6 +127,14 @@
         document.getElementById('candidates-form').addEventListener('submit', function(event) {
             event.preventDefault();
             
+            const resultDiv = document.getElementById('result');
+            const loaderDiv = document.getElementById('loader');
+            
+            // Show loader and clear previous results
+            loaderDiv.style.display = 'block';
+            resultDiv.innerHTML = '';
+            resultDiv.className = '';
+            
             const formData = new FormData(this);
             
             fetch('/get_candidates', {
@@ -95,14 +143,19 @@
             })
             .then(response => response.json())
             .then(data => {
+                loaderDiv.style.display = 'none';
                 if (data.url) {
-                    document.getElementById('result').innerHTML = `<p>The candidates have been processed. <a href="${data.url}" target="_blank">See the candidate sheet</a></p>`;
+                    resultDiv.innerHTML = `<p><i class='fas fa-check-circle'></i> The candidates have been processed. <a href="${data.url}" target="_blank">See the candidate sheet <i class='fas fa-external-link-alt'></i></a></p>`;
+                    resultDiv.className = 'success-result';
                 } else {
-                    document.getElementById('result').innerHTML = `<p>Error: ${data.error}</p>`;
+                    resultDiv.innerHTML = `<p><i class='fas fa-exclamation-circle'></i> Error: ${data.error}</p>`;
+                    resultDiv.className = 'error-result';
                 }
             })
             .catch(error => {
-                document.getElementById('result').innerHTML = `<p>Error: ${error}</p>`;
+                loaderDiv.style.display = 'none';
+                resultDiv.innerHTML = `<p><i class='fas fa-exclamation-circle'></i> Error: ${error}</p>`;
+                resultDiv.className = 'error-result';
             });
         });
     </script>

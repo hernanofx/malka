@@ -21,7 +21,18 @@ Si encuentras un error como `ImportError: cannot import name 'url_quote' from 'w
    flask==2.0.1
    werkzeug==2.0.1
    ```
-3. Después de actualizar, vuelve a desplegar la aplicación
+
+### Error de NumPy/Pandas
+Si encuentras un error como `ValueError: numpy.dtype size changed, may indicate binary incompatibility`:
+
+1. Este error se debe a incompatibilidades entre versiones de NumPy y Pandas
+2. La solución es fijar versiones compatibles en requirements.txt:
+   ```
+   numpy==1.20.3
+   pandas==1.3.3
+   scikit-learn==0.24.2
+   ```
+3. En la versión más reciente, hemos implementado manejadores de errores para cuando faltan dependencias
 
 ## Estructura del Proyecto
 

@@ -2,8 +2,8 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 import os
 import json
 import secrets
+import traceback
 from functools import wraps
-from projectAron.codigoARON_simple import get_candidates, create_new_sheet, get_all_sheets
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
@@ -53,6 +53,9 @@ def logout():
 @app.route('/get_sheets/<spreadsheet_name>', methods=['GET'])
 def get_sheets(spreadsheet_name):
     try:
+        # Import here to avoid initial load issues
+        from projectAron.codigoARON_simple import get_all_sheets
+        
         # Utilizar la función get_all_sheets para obtener las hojas
         sheet_names = get_all_sheets(spreadsheet_name)
         
@@ -62,24 +65,40 @@ def get_sheets(spreadsheet_name):
         return jsonify({"sheets": sheet_names})
     
     except Exception as e:
+        app.logger.error(f"Error getting sheets: {str(e)}")
+        app.logger.error(traceback.format_exc())
         return jsonify({"error": f"Error al obtener las hojas: {str(e)}"}), 500
 
 # Ruta para obtener candidatos
 @app.route('/get_candidates', methods=['POST'])
 def get_candidates_route():
-    # Obtener los datos del formulario
-    spreadsheet_name = request.form.get('spreadsheet_name')
-    sheet_names = request.form.getlist('sheet_names')
-    top_n = int(request.form.get('top_n'))
-    job_description = request.form.get('job_description')
-
-    # Llamar a la función get_candidates con los parámetros proporcionados
     try:
+        # Import here to avoid initial load issues
+        from projectAron.codigoARON_simple import get_candidates, create_new_sheet
+        
+        # Obtener los datos del formulario
+        spreadsheet_name = request.form.get('spreadsheet_name')
+        sheet_names = request.form.getlist('sheet_names')
+        top_n = int(request.form.get('top_n'))
+        job_description = request.form.get('job_description')
+
+        # Llamar a la función get_candidates con los parámetros proporcionados
         candidates = get_candidates(spreadsheet_name, sheet_names, job_description, top_n)
         new_sheet_url = create_new_sheet(spreadsheet_name, candidates)
         return jsonify({"url": new_sheet_url})
+    except ImportError as e:
+        app.logger.error(f"Import error: {str(e)}")
+        app.logger.error(traceback.format_exc())
+        return jsonify({"error": f"Error de importación: {str(e)}. Es posible que falten dependencias en el servidor."}), 500
     except Exception as e:
+        app.logger.error(f"General error: {str(e)}")
+        app.logger.error(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
+
+# Health check endpoint
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))

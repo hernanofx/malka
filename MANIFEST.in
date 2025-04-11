@@ -1,0 +1,3 @@
+recursive-include projectAron/static *
+recursive-include projectAron/templates *
+include projectAron/credenciales.json

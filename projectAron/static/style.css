@@ -1,23 +1,20 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f5f7fa;
+    background-color: #f8f9fa;
     margin: 0;
     padding: 0;
     color: #333;
+    line-height: 1.6;
 }
 
 .container {
-    width: 70%;
-    margin: 50px auto;
+    width: 80%;
+    max-width: 900px;
+    margin: 60px auto;
     background-color: white;
     padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.container:hover {
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
@@ -25,39 +22,39 @@ h1 {
     color: #2c3e50;
     margin-bottom: 30px;
     font-weight: 600;
-    font-size: 28px;
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 1px solid #eee;
     padding-bottom: 15px;
 }
 
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
+.form-group {
+    margin-bottom: 25px;
+    position: relative;
 }
 
 label {
+    display: block;
     font-weight: 600;
     color: #444;
-    margin-bottom: -10px;
-    font-size: 14px;
-    display: block;
+    margin-bottom: 8px;
+    font-size: 15px;
 }
 
 input, select, textarea {
+    width: 100%;
     padding: 12px;
     font-size: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    background-color: #f8f9fa;
-    transition: all 0.2s ease;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    background-color: #f9f9f9;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: #3498db;
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    background-color: #fff;
 }
 
 select[multiple] {
@@ -70,22 +67,23 @@ textarea {
 }
 
 button {
-    padding: 12px;
+    padding: 12px 20px;
     font-size: 16px;
     background-color: #3498db;
     color: white;
     border: none;
+    border-radius: 4px;
     cursor: pointer;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-    font-weight: 600;
+    transition: background-color 0.3s, transform 0.2s;
     margin-top: 10px;
-    box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 button:hover {
     background-color: #2980b9;
-    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.4);
     transform: translateY(-2px);
 }
 
@@ -93,12 +91,15 @@ button:active {
     transform: translateY(0);
 }
 
+button i {
+    margin-right: 8px;
+}
+
 #result {
     margin-top: 25px;
-    text-align: center;
     padding: 15px;
-    border-radius: 6px;
-    transition: all 0.3s ease;
+    border-radius: 4px;
+    text-align: center;
 }
 
 #result p {
@@ -110,33 +111,33 @@ button:active {
     color: #3498db;
     text-decoration: none;
     font-weight: 600;
-    transition: all 0.2s ease;
+    display: inline-block;
+    margin-top: 5px;
 }
 
 #result a:hover {
-    color: #2980b9;
     text-decoration: underline;
 }
 
 .loader {
     display: none;
     text-align: center;
-    margin: 15px auto;
+    margin: 20px auto;
 }
 
 .loader-spinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
+    display: inline-block;
     width: 30px;
     height: 30px;
-    animation: spin 2s linear infinite;
-    margin: 0 auto;
+    border: 3px solid rgba(52, 152, 219, 0.3);
+    border-radius: 50%;
+    border-top-color: #3498db;
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 10px;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
 }
 
 .success-result {
@@ -151,49 +152,58 @@ button:active {
     color: #721c24;
 }
 
-/* New styles for login */
-.error-message {
-    color: #721c24;
-    background-color: #f8d7da;
-    padding: 12px;
-    margin-bottom: 20px;
-    border-radius: 6px;
-    text-align: center;
-    border: 1px solid #f5c6cb;
+.form-info-icon {
+    position: absolute;
+    right: 10px;
+    top: 38px;
+    color: #6c757d;
+    cursor: help;
+    z-index: 1;
 }
 
-.auth-options {
-    margin-top: 25px;
-    text-align: center;
+.form-info-tooltip {
+    display: none;
+    position: absolute;
+    background-color: #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    width: 220px;
+    top: -5px;
+    right: 30px;
+    font-size: 12px;
+    font-weight: normal;
+    z-index: 2;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    line-height: 1.4;
 }
 
-.google-login {
-    display: inline-block;
-    background-color: #4285F4;
-    color: white;
-    padding: 10px 20px;
-    text-decoration: none;
-    border-radius: 6px;
-    margin-top: 10px;
-    font-weight: 600;
-    transition: all 0.3s ease;
+.form-info-icon:hover .form-info-tooltip {
+    display: block;
 }
 
-.google-login:hover {
-    background-color: #357ae8;
-    transform: translateY(-2px);
+.user-info, .logout-btn {
+    position: fixed;
+    z-index: 100;
+    background-color: #f1f1f1;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.user-info {
+    top: 20px;
+    left: 20px;
+    color: #666;
 }
 
 .logout-btn {
-    position: absolute;
     top: 20px;
     right: 20px;
     text-decoration: none;
     color: #666;
     background-color: #f1f1f1;
-    padding: 8px 15px;
-    border-radius: 20px;
-    font-size: 14px;
     transition: all 0.3s ease;
 }
 
@@ -202,43 +212,26 @@ button:active {
     color: #333;
 }
 
-.user-info {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    color: #666;
-    font-size: 14px;
-    background-color: #f1f1f1;
-    padding: 8px 15px;
-    border-radius: 20px;
-}
-
-.form-group {
-    position: relative;
-}
-
-.form-info-icon {
-    position: absolute;
-    right: 10px;
-    top: 10px;
-    color: #6c757d;
-    cursor: help;
-}
-
-.form-info-tooltip {
-    display: none;
-    position: absolute;
-    background-color: #333;
-    color: #fff;
-    padding: 10px;
-    border-radius: 6px;
-    z-index: 100;
-    width: 200px;
-    top: -5px;
-    right: 30px;
-    font-size: 12px;
-}
-
-.form-info-icon:hover .form-info-tooltip {
-    display: block;
+@media (max-width: 768px) {
+    .container {
+        width: 90%;
+        padding: 20px;
+        margin: 30px auto;
+    }
+    
+    .user-info, .logout-btn {
+        position: relative;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+    
+    .user-info {
+        top: 0;
+        left: 0;
+    }
+    
+    .logout-btn {
+        top: 0;
+        right: 0;
+    }
 }

@@ -12,6 +12,23 @@ Esta es una versión optimizada y ligera que:
 
 ## Soluciones a errores comunes
 
+### Error de credenciales no encontradas
+Si encuentras un error como `FileNotFoundError: Credentials file not found: credenciales.json`:
+
+1. Este error ocurre cuando la aplicación no puede encontrar las credenciales de Google
+2. Asegúrate de que la variable de entorno `GOOGLE_CREDENTIALS` esté correctamente configurada:
+   ```
+   heroku config:set GOOGLE_CREDENTIALS="$(cat credenciales.json)"
+   ```
+3. Verifica que la variable de entorno se haya establecido correctamente:
+   ```
+   heroku config:get GOOGLE_CREDENTIALS
+   ```
+4. Si estás ejecutando localmente, crea un archivo `.env` con el contenido:
+   ```
+   GOOGLE_CREDENTIALS='{"type":"service_account","project_id":"...","private_key":"...",...}'
+   ```
+
 ### Error de importación de Werkzeug
 Si encuentras un error como `ImportError: cannot import name 'url_quote' from 'werkzeug.urls'`:
 
@@ -82,11 +99,14 @@ Malka/
    ```
    heroku config:set SECRET_KEY=your_secret_key
    heroku config:set AUTHORIZED_USERS=user1@example.com,user2@example.com
+   heroku config:set GOOGLE_CREDENTIALS="$(cat credenciales.json)"
    ```
 
-6. Si tienes las credenciales como archivo JSON, configúralas como variable de entorno:
+6. Verifica que las variables de entorno se hayan establecido correctamente:
    ```
-   heroku config:set GOOGLE_CREDENTIALS="$(cat credenciales.json)"
+   heroku config:get SECRET_KEY
+   heroku config:get AUTHORIZED_USERS
+   heroku config:get GOOGLE_CREDENTIALS
    ```
 
 7. Especifica manualmente el buildpack de Python:

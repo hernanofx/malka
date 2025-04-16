@@ -8,7 +8,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-
+# Credentials
+credenciales.json
+client_secrets.json
+*.p12
+*.pem
+*-key.json
 
 # Local development
 .env

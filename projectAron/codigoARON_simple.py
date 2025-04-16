@@ -150,7 +150,7 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
     try:
         # Check for credentials in environment variables first
         if os.environ.get('GOOGLE_CREDENTIALS'):
-            print("Using credentials from environment variable")
+            print("Using credentials from environment variable GOOGLE_CREDENTIALS")
             try:
                 # Create JSON directly from the environment variable
                 json_creds = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
@@ -160,13 +160,38 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
                 return client
             except Exception as env_error:
                 print(f"Error using credentials from environment variable: {env_error}")
-                # Don't fall back to file if we had environment variables but they were invalid
+                # Don't fall back to file if environment variables were set but invalid
                 raise
+        # Check if GOOGLE_APPLICATION_CREDENTIALS environment variable exists
+        elif os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
+            creds_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+            print(f"Using credentials from GOOGLE_APPLICATION_CREDENTIALS: {creds_path}")
+            if os.path.exists(creds_path):
+                scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+                client = gspread.authorize(creds)
+                return client
+            else:
+                raise FileNotFoundError(f"Credentials file not found at path from GOOGLE_APPLICATION_CREDENTIALS: {creds_path}")
         else:
-            # Only try file-based authentication if environment variable is not available
+            # Only try file-based authentication if environment variables are not available
             print(f"Using credentials from file: {creds_file}")
             if not os.path.exists(creds_file):
-                raise FileNotFoundError(f"Credentials file not found: {creds_file}")
+                # Try to use config.setup_credentials() to create credentials file
+                try:
+                    from projectAron import config
+                    temp_path = config.setup_credentials()
+                    if temp_path and os.path.exists(temp_path):
+                        print(f"Using temporary credentials file: {temp_path}")
+                        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                        creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
+                        client = gspread.authorize(creds)
+                        return client
+                    else:
+                        raise FileNotFoundError(f"Credentials file not found: {creds_file} and failed to create temporary credentials")
+                except ImportError:
+                    raise FileNotFoundError(f"Credentials file not found: {creds_file} and config module not available")
+            
             scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
             creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
             client = gspread.authorize(creds)
@@ -178,17 +203,30 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
 def download_file_from_drive(file_id, destination=None):
     """Download file from Google Drive and return its content as text"""
     try:
-        # Get credentials following the same pattern as authenticate_google_sheets
-        if os.environ.get('GOOGLE_CREDENTIALS'):
-            print(f"Using env credentials to download file: {file_id}")
-            json_creds = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
-            scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(json_creds, scope)
+        # Use the same authentication method as authenticate_google_sheets
+        client = authenticate_google_sheets()
+        
+        # Get a fresh credential object
+        if hasattr(client, 'auth'):
+            creds = client.auth
         else:
-            print(f"Using file credentials to download file: {file_id}")
-            creds_file = "credenciales.json"
-            scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-            creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
+            # Fallback to creating new credentials if client.auth is not available
+            if os.environ.get('GOOGLE_CREDENTIALS'):
+                json_creds = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
+                scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                creds = ServiceAccountCredentials.from_json_keyfile_dict(json_creds, scope)
+            elif os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
+                creds_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+                scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+            else:
+                # Try to use the default file
+                creds_file = "credenciales.json"
+                if os.path.exists(creds_file):
+                    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
+                else:
+                    raise FileNotFoundError("No credentials available for downloading files")
         
         # Build the service
         service = build('drive', 'v3', credentials=creds)

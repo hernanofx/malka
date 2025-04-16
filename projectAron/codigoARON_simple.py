@@ -157,9 +157,31 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
                 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
                 creds = ServiceAccountCredentials.from_json_keyfile_dict(json_creds, scope)
                 client = gspread.authorize(creds)
+                print("Successfully authenticated using GOOGLE_CREDENTIALS")
                 return client
+            except json.JSONDecodeError as json_err:
+                print(f"Error parsing JSON from GOOGLE_CREDENTIALS: {json_err}")
+                print(f"First 100 chars of GOOGLE_CREDENTIALS: {os.environ.get('GOOGLE_CREDENTIALS')[:100]}...")
+                # Try to use config.setup_credentials() if JSON parsing fails
+                try:
+                    from projectAron import config
+                    print("Attempting to use config.setup_credentials() after JSON parse error")
+                    temp_path = config.setup_credentials()
+                    if temp_path and os.path.exists(temp_path):
+                        print(f"Using temporary credentials file from config: {temp_path}")
+                        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                        creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
+                        client = gspread.authorize(creds)
+                        return client
+                except ImportError:
+                    print("Config module not available after JSON parse error")
+                except Exception as config_err:
+                    print(f"Error using config.setup_credentials after JSON parse error: {config_err}")
+                raise json_err
             except Exception as env_error:
                 print(f"Error using credentials from environment variable: {env_error}")
+                import traceback
+                traceback.print_exc()
                 # Don't fall back to file if environment variables were set but invalid
                 raise
         # Check if GOOGLE_APPLICATION_CREDENTIALS environment variable exists
@@ -180,6 +202,7 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
                 # Try to use config.setup_credentials() to create credentials file
                 try:
                     from projectAron import config
+                    print("Attempting to use config.setup_credentials()")
                     temp_path = config.setup_credentials()
                     if temp_path and os.path.exists(temp_path):
                         print(f"Using temporary credentials file: {temp_path}")
@@ -188,8 +211,15 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
                         client = gspread.authorize(creds)
                         return client
                     else:
+                        print("Failed to create temporary credentials")
+                        # Check all environment variables to help with debugging
+                        print("Available environment variables:")
+                        for key in os.environ:
+                            if 'GOOGLE' in key or 'CRED' in key:
+                                print(f"  - {key}: {'<FOUND>' if os.environ[key] else '<EMPTY>'}")
                         raise FileNotFoundError(f"Credentials file not found: {creds_file} and failed to create temporary credentials")
                 except ImportError:
+                    print("Config module not available")
                     raise FileNotFoundError(f"Credentials file not found: {creds_file} and config module not available")
             
             scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -198,6 +228,8 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
             return client
     except Exception as e:
         print(f"Error authenticating with Google Sheets: {e}")
+        import traceback
+        traceback.print_exc()
         raise
 
 def download_file_from_drive(file_id, destination=None):

@@ -8,6 +8,18 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
+# Inicializar credenciales al inicio
+try:
+    from projectAron import config
+    credentials_path = config.setup_credentials()
+    if credentials_path:
+        app.logger.info(f"Initialized credentials at startup: {credentials_path}")
+    else:
+        app.logger.warning("Failed to initialize credentials at startup")
+except Exception as e:
+    app.logger.error(f"Error initializing credentials: {e}")
+    traceback.print_exc()
+
 # Lista de usuarios autorizados (para entorno de desarrollo)
 USERS = {
     'admin@example.com': 'password123',

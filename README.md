@@ -13,20 +13,42 @@ Esta es una versión optimizada y ligera que:
 ## Soluciones a errores comunes
 
 ### Error de credenciales no encontradas
-Si encuentras un error como `FileNotFoundError: Credentials file not found: credenciales.json`:
+Si encuentras un error como `FileNotFoundError: Credentials file not found: credenciales.json and failed to create temporary credentials`:
 
 1. Este error ocurre cuando la aplicación no puede encontrar las credenciales de Google
 2. Asegúrate de que la variable de entorno `GOOGLE_CREDENTIALS` esté correctamente configurada:
    ```
    heroku config:set GOOGLE_CREDENTIALS="$(cat credenciales.json)"
    ```
+   
+   Para Windows, puedes usar:
+   ```
+   heroku config:set GOOGLE_CREDENTIALS="$(Get-Content -Raw credenciales.json)"
+   ```
+   
+   Si tienes problemas con los saltos de línea, copia el contenido del archivo JSON, escapa todas las comillas dobles (\"") y ejecuta:
+   ```
+   heroku config:set GOOGLE_CREDENTIALS="{\"type\":\"service_account\",\"project_id\":\"...\",...}"
+   ```
+   
 3. Verifica que la variable de entorno se haya establecido correctamente:
    ```
    heroku config:get GOOGLE_CREDENTIALS
    ```
+   
+   También puedes reiniciar los dynos después de configurar variables de entorno:
+   ```
+   heroku restart
+   ```
+   
 4. Si estás ejecutando localmente, crea un archivo `.env` con el contenido:
    ```
    GOOGLE_CREDENTIALS='{"type":"service_account","project_id":"...","private_key":"...",...}'
+   ```
+
+5. Para debugging, puedes ejecutar el script de verificación de entorno:
+   ```
+   heroku run python -m projectAron.debug_env
    ```
 
 ### Error de importación de Werkzeug

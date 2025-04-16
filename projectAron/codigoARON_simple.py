@@ -476,38 +476,78 @@ def get_candidates(spreadsheet_name, sheet_names, job_description, top_n):
             empty_df = pd.DataFrame(columns=["Applicant", "Resume", "Information", "Interview link", "Phone Number", "E-mail", "Client", "similarity"])
             return empty_df
         
-        # Filter candidates without resume or information
-        has_resume = df["idResume"] != ""
-        has_info = df["idInformation"] != ""
-        df_filtered = pd.DataFrame([row for i, row in enumerate(df.data) 
-                                    if (has_resume.data[i] or has_info.data[i])])
-        df_filtered.columns = df.columns
+        # Check if we're using real pandas or the fallback implementation
+        using_real_pandas = not hasattr(df, 'data')
         
-        if not df_filtered.data:
+        # Filter candidates without resume or information
+        if using_real_pandas:
+            # Real pandas implementation
+            has_resume = df["idResume"] != ""
+            has_info = df["idInformation"] != ""
+            df_filtered = df[has_resume | has_info].copy()
+        else:
+            # Custom DataFrame implementation
+            has_resume = df["idResume"] != ""
+            has_info = df["idInformation"] != ""
+            df_filtered = pd.DataFrame([row for i, row in enumerate(df.data) 
+                                       if (has_resume.data[i] or has_info.data[i])])
+            df_filtered.columns = df.columns
+        
+        if using_real_pandas and len(df_filtered) == 0:
+            print("No candidates with resume or information.")
+            empty_df = pd.DataFrame(columns=["Applicant", "Resume", "Information", "Interview link", "Phone Number", "E-mail", "Client", "similarity"])
+            return empty_df
+        elif not using_real_pandas and not df_filtered.data:
             print("No candidates with resume or information.")
             empty_df = pd.DataFrame(columns=["Applicant", "Resume", "Information", "Interview link", "Phone Number", "E-mail", "Client", "similarity"])
             return empty_df
             
         # Extract text from files
         extracted_texts = []
-        for i, row in enumerate(df_filtered.data):
-            resume_id = row[df_filtered.columns.index("idResume")]
-            info_id = row[df_filtered.columns.index("idInformation")]
-            
-            resume_text = download_file_from_drive(resume_id) if resume_id else ""
-            info_text = download_file_from_drive(info_id) if info_id else ""
-            combined_text = resume_text + " " + info_text
-            extracted_texts.append(combined_text)
         
-        # Add combined_text to df_filtered
-        df_filtered.columns.append("combined_text")
-        for i, text in enumerate(extracted_texts):
-            if i < len(df_filtered.data):
-                df_filtered.data[i].append(text)
+        if using_real_pandas:
+            # Real pandas implementation
+            for _, row in df_filtered.iterrows():
+                resume_id = row["idResume"]
+                info_id = row["idInformation"]
+                
+                resume_text = download_file_from_drive(resume_id) if resume_id else ""
+                info_text = download_file_from_drive(info_id) if info_id else ""
+                combined_text = resume_text + " " + info_text
+                extracted_texts.append(combined_text)
+                
+            # Add combined_text to df_filtered
+            df_filtered["combined_text"] = extracted_texts
+        else:
+            # Custom DataFrame implementation
+            for i, row in enumerate(df_filtered.data):
+                resume_idx = df_filtered.columns.index("idResume") 
+                info_idx = df_filtered.columns.index("idInformation")
+                
+                resume_id = row[resume_idx] if resume_idx < len(row) else ""
+                info_id = row[info_idx] if info_idx < len(row) else ""
+                
+                resume_text = download_file_from_drive(resume_id) if resume_id else ""
+                info_text = download_file_from_drive(info_id) if info_id else ""
+                combined_text = resume_text + " " + info_text
+                extracted_texts.append(combined_text)
+            
+            # Add combined_text to df_filtered
+            df_filtered.columns.append("combined_text")
+            for i, text in enumerate(extracted_texts):
+                if i < len(df_filtered.data):
+                    df_filtered.data[i].append(text)
         
         # Use TF-IDF and cosine similarity
         vectorizer = TfidfVectorizer(stop_words='english')
-        tfidf_matrix = vectorizer.fit_transform([job_description] + extracted_texts)
+        
+        # Create document list for TF-IDF
+        if using_real_pandas:
+            documents = [job_description] + df_filtered["combined_text"].tolist()
+        else:
+            documents = [job_description] + extracted_texts
+        
+        tfidf_matrix = vectorizer.fit_transform(documents)
         
         # Calculate similarity
         job_vector = tfidf_matrix[0:1]
@@ -515,15 +555,27 @@ def get_candidates(spreadsheet_name, sheet_names, job_description, top_n):
         similarities = cosine_similarity(job_vector, candidate_vectors)[0]
         
         # Add similarity to df_filtered
-        df_filtered.columns.append("similarity")
-        for i, sim in enumerate(similarities):
-            if i < len(df_filtered.data):
-                df_filtered.data[i].append(sim)
+        if using_real_pandas:
+            # Real pandas implementation
+            df_filtered["similarity"] = similarities
+        else:
+            # Custom DataFrame implementation
+            df_filtered.columns.append("similarity")
+            for i, sim in enumerate(similarities):
+                if i < len(df_filtered.data):
+                    df_filtered.data[i].append(sim)
                 
         # Get top candidates
-        top_candidates = df_filtered.nlargest(top_n, "similarity")
-        result_columns = ["Applicant", "Resume", "Information", "Interview link", "Phone Number", "E-mail", "Client", "similarity"]
-        return top_candidates[result_columns]
+        if using_real_pandas:
+            # Real pandas implementation
+            top_candidates = df_filtered.nlargest(top_n, "similarity")
+            result_columns = ["Applicant", "Resume", "Information", "Interview link", "Phone Number", "E-mail", "Client", "similarity"]
+            return top_candidates[result_columns]
+        else:
+            # Custom DataFrame implementation 
+            top_candidates = df_filtered.nlargest(top_n, "similarity")
+            result_columns = ["Applicant", "Resume", "Information", "Interview link", "Phone Number", "E-mail", "Client", "similarity"]
+            return top_candidates[result_columns]
         
     except Exception as e:
         print(f"Error in get_candidates: {e}")
@@ -614,3 +666,4 @@ def get_all_sheets(spreadsheet_name_or_id):
         import traceback
         traceback.print_exc()
         return []
+```

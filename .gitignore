@@ -9,10 +9,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# No excluimos credenciales para asegurar que se despliegan a Heroku
-# credenciales.json
-# client_secrets.json
-
 # Temporary files
 temp_*.pdf
 temp_*.docx
@@ -24,3 +20,7 @@ temp_*.docx
 # Database
 *.db
 *.sqlite3
+
+# NO ignorar archivos de credenciales para asegurar que se suban a Heroku
+# credenciales.json
+# client_secrets.json

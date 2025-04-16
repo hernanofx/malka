@@ -145,90 +145,174 @@ except ImportError:
 def authenticate_google_sheets(creds_file="credenciales.json"):
     """
     Authenticate with Google Sheets API using service account credentials.
-    Prioritizes environment variables over file credentials.
+    Tries multiple methods to find valid credentials:
+    1. GOOGLE_CREDENTIALS environment variable (JSON string)
+    2. GOOGLE_APPLICATION_CREDENTIALS environment variable (file path)
+    3. Local credentials file (default: credenciales.json)
     """
+    import os
+    import json
+    import tempfile
+    import traceback
+    from oauth2client.service_account import ServiceAccountCredentials
+    import gspread
+    
+    print("=== Starting Google Sheets Authentication ===")
     try:
-        # Check for credentials in environment variables first
+        # MÉTODO 1: Credenciales como JSON en variable de entorno GOOGLE_CREDENTIALS
         if os.environ.get('GOOGLE_CREDENTIALS'):
-            print("Using credentials from environment variable GOOGLE_CREDENTIALS")
+            print("📌 MÉTODO 1: Usando GOOGLE_CREDENTIALS como JSON")
             try:
-                # Create JSON directly from the environment variable
-                json_creds = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
-                scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-                creds = ServiceAccountCredentials.from_json_keyfile_dict(json_creds, scope)
-                client = gspread.authorize(creds)
-                print("Successfully authenticated using GOOGLE_CREDENTIALS")
-                return client
-            except json.JSONDecodeError as json_err:
-                print(f"Error parsing JSON from GOOGLE_CREDENTIALS: {json_err}")
-                print(f"First 100 chars of GOOGLE_CREDENTIALS: {os.environ.get('GOOGLE_CREDENTIALS')[:100]}...")
-                # Try to use config.setup_credentials() if JSON parsing fails
+                # Crear JSON directamente desde la variable de entorno
+                json_data = os.environ.get('GOOGLE_CREDENTIALS')
+                print(f"GOOGLE_CREDENTIALS longitud: {len(json_data)} caracteres")
+                
+                # Intentar visualizar el inicio del JSON para depuración
+                if len(json_data) > 50:
+                    print(f"GOOGLE_CREDENTIALS inicio: {json_data[:50]}...")
+                
                 try:
-                    from projectAron import config
-                    print("Attempting to use config.setup_credentials() after JSON parse error")
-                    temp_path = config.setup_credentials()
-                    if temp_path and os.path.exists(temp_path):
-                        print(f"Using temporary credentials file from config: {temp_path}")
-                        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-                        creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
-                        client = gspread.authorize(creds)
-                        return client
-                except ImportError:
-                    print("Config module not available after JSON parse error")
-                except Exception as config_err:
-                    print(f"Error using config.setup_credentials after JSON parse error: {config_err}")
-                raise json_err
-            except Exception as env_error:
-                print(f"Error using credentials from environment variable: {env_error}")
-                import traceback
+                    # Intentar cargar el JSON
+                    json_creds = json.loads(json_data)
+                    print("✅ JSON parseado correctamente")
+                    
+                    # Verificar campos críticos
+                    if 'type' in json_creds:
+                        print(f"Tipo de credencial: {json_creds['type']}")
+                    if 'project_id' in json_creds:
+                        print(f"Project ID: {json_creds['project_id']}")
+                    if 'client_email' in json_creds:
+                        print(f"Client email: {json_creds['client_email']}")
+                    
+                    # Verificar la clave privada
+                    if 'private_key' in json_creds:
+                        private_key = json_creds['private_key']
+                        if "-----BEGIN PRIVATE KEY-----" in private_key and "-----END PRIVATE KEY-----" in private_key:
+                            print("✅ Formato de clave privada válido")
+                        else:
+                            print("⚠️ El formato de la clave privada puede ser incorrecto")
+                            # Intentar arreglar problemas comunes con la clave privada
+                            if '\\n' in private_key and '\n' not in private_key:
+                                print("Corrigiendo '\\n' en clave privada")
+                                private_key = private_key.replace('\\n', '\n')
+                                json_creds['private_key'] = private_key
+                    
+                    # Autenticar con las credenciales
+                    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                    creds = ServiceAccountCredentials.from_json_keyfile_dict(json_creds, scope)
+                    client = gspread.authorize(creds)
+                    print("✅ Autenticado exitosamente usando GOOGLE_CREDENTIALS")
+                    return client
+                    
+                except json.JSONDecodeError as e:
+                    print(f"❌ Error al parsear JSON: {str(e)}")
+                    print("Intentando crear archivo temporal...")
+                    
+                    # Crear archivo temporal y guardar el contenido
+                    fd, temp_path = tempfile.mkstemp(suffix='.json')
+                    with os.fdopen(fd, 'w') as f:
+                        f.write(json_data)
+                    
+                    # Autenticar con el archivo temporal
+                    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                    creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
+                    client = gspread.authorize(creds)
+                    print(f"✅ Autenticado exitosamente usando archivo temporal: {temp_path}")
+                    return client
+                    
+            except Exception as e:
+                print(f"❌ Error usando GOOGLE_CREDENTIALS: {str(e)}")
                 traceback.print_exc()
-                # Don't fall back to file if environment variables were set but invalid
-                raise
-        # Check if GOOGLE_APPLICATION_CREDENTIALS environment variable exists
-        elif os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
+        
+        # MÉTODO 2: Ruta a archivo de credenciales en GOOGLE_APPLICATION_CREDENTIALS
+        if os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
+            print("📌 MÉTODO 2: Usando GOOGLE_APPLICATION_CREDENTIALS como ruta a archivo")
             creds_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
-            print(f"Using credentials from GOOGLE_APPLICATION_CREDENTIALS: {creds_path}")
+            print(f"Ruta de credenciales: {creds_path}")
+            
             if os.path.exists(creds_path):
+                print(f"✅ Archivo existe: {creds_path}")
+                try:
+                    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+                    client = gspread.authorize(creds)
+                    print("✅ Autenticado exitosamente usando GOOGLE_APPLICATION_CREDENTIALS")
+                    return client
+                except Exception as e:
+                    print(f"❌ Error usando archivo de GOOGLE_APPLICATION_CREDENTIALS: {str(e)}")
+                    traceback.print_exc()
+            else:
+                print(f"❌ Archivo no existe: {creds_path}")
+        
+        # MÉTODO 3: Importar desde config.py
+        print("📌 MÉTODO 3: Intentando usar config.setup_credentials()")
+        try:
+            # Intentar importar config y usar setup_credentials
+            from projectAron import config
+            temp_path = config.setup_credentials()
+            
+            if temp_path and os.path.exists(temp_path):
+                print(f"✅ Archivo temporal creado: {temp_path}")
                 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-                creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+                creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
                 client = gspread.authorize(creds)
+                print("✅ Autenticado exitosamente usando config.setup_credentials()")
                 return client
             else:
-                raise FileNotFoundError(f"Credentials file not found at path from GOOGLE_APPLICATION_CREDENTIALS: {creds_path}")
+                print("❌ No se pudo crear archivo temporal con config.setup_credentials()")
+        except ImportError:
+            print("❌ No se pudo importar el módulo config")
+        except Exception as e:
+            print(f"❌ Error usando config.setup_credentials(): {str(e)}")
+            traceback.print_exc()
+        
+        # MÉTODO 4: Usar archivo local
+        print(f"📌 MÉTODO 4: Intentando usar archivo local: {creds_file}")
+        if os.path.exists(creds_file):
+            print(f"✅ Archivo existe: {creds_file}")
+            try:
+                scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
+                client = gspread.authorize(creds)
+                print(f"✅ Autenticado exitosamente usando archivo local: {creds_file}")
+                return client
+            except Exception as e:
+                print(f"❌ Error usando archivo local: {str(e)}")
+                traceback.print_exc()
         else:
-            # Only try file-based authentication if environment variables are not available
-            print(f"Using credentials from file: {creds_file}")
-            if not os.path.exists(creds_file):
-                # Try to use config.setup_credentials() to create credentials file
-                try:
-                    from projectAron import config
-                    print("Attempting to use config.setup_credentials()")
-                    temp_path = config.setup_credentials()
-                    if temp_path and os.path.exists(temp_path):
-                        print(f"Using temporary credentials file: {temp_path}")
-                        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-                        creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
-                        client = gspread.authorize(creds)
-                        return client
-                    else:
-                        print("Failed to create temporary credentials")
-                        # Check all environment variables to help with debugging
-                        print("Available environment variables:")
-                        for key in os.environ:
-                            if 'GOOGLE' in key or 'CRED' in key:
-                                print(f"  - {key}: {'<FOUND>' if os.environ[key] else '<EMPTY>'}")
-                        raise FileNotFoundError(f"Credentials file not found: {creds_file} and failed to create temporary credentials")
-                except ImportError:
-                    print("Config module not available")
-                    raise FileNotFoundError(f"Credentials file not found: {creds_file} and config module not available")
+            print(f"❌ Archivo no existe: {creds_file}")
+        
+        # MÉTODO 5: Buscar archivo en directorio del script
+        print("📌 MÉTODO 5: Buscando archivo en el directorio del script")
+        try:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            script_creds_file = os.path.join(script_dir, "credenciales.json")
+            print(f"Buscando en: {script_creds_file}")
             
-            scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-            creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
-            client = gspread.authorize(creds)
-            return client
+            if os.path.exists(script_creds_file):
+                print(f"✅ Archivo existe: {script_creds_file}")
+                scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                creds = ServiceAccountCredentials.from_json_keyfile_name(script_creds_file, scope)
+                client = gspread.authorize(creds)
+                print(f"✅ Autenticado exitosamente usando archivo en directorio del script: {script_creds_file}")
+                return client
+            else:
+                print(f"❌ Archivo no existe: {script_creds_file}")
+        except Exception as e:
+            print(f"❌ Error buscando en directorio del script: {str(e)}")
+            traceback.print_exc()
+        
+        # Si llegamos aquí, ningún método funcionó
+        print("❌ TODOS LOS MÉTODOS FALLARON")
+        print("Variables de entorno disponibles:")
+        for key, value in os.environ.items():
+            if 'GOOGLE' in key or 'CRED' in key:
+                print(f"  - {key}: {'<ESTABLECIDO>' if value else '<VACÍO>'}")
+        
+        raise FileNotFoundError(f"No se pudieron encontrar credenciales válidas. Verifica GOOGLE_CREDENTIALS o el archivo {creds_file}")
+        
     except Exception as e:
-        print(f"Error authenticating with Google Sheets: {e}")
-        import traceback
+        print(f"❌ Error en authenticate_google_sheets: {str(e)}")
         traceback.print_exc()
         raise
 

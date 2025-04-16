@@ -2,3 +2,6 @@ recursive-include projectAron/static *
 recursive-include projectAron/templates *
 include projectAron/credenciales.json
 include projectAron/*.json
+include requirements.txt
+include runtime.txt
+include Procfile

@@ -119,7 +119,8 @@ except ImportError:
             doc_term_matrix = []
             for text in texts:
                 term_counts = self._count_terms(text)
-                vector = [0] * len(self.vocabulary_)
+                vector = [0] * len(self.vocabulary_
+                )
                 for term, count in term_counts.items():
                     if term in self.vocabulary_:
                         vector[self.vocabulary_[term]] = count
@@ -150,15 +151,22 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
         # Check for credentials in environment variables first
         if os.environ.get('GOOGLE_CREDENTIALS'):
             print("Using credentials from environment variable")
-            # Create JSON directly from the environment variable
-            json_creds = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
-            scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(json_creds, scope)
-            client = gspread.authorize(creds)
-            return client
+            try:
+                # Create JSON directly from the environment variable
+                json_creds = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
+                scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+                creds = ServiceAccountCredentials.from_json_keyfile_dict(json_creds, scope)
+                client = gspread.authorize(creds)
+                return client
+            except Exception as env_error:
+                print(f"Error using credentials from environment variable: {env_error}")
+                # Don't fall back to file if we had environment variables but they were invalid
+                raise
         else:
             # Only try file-based authentication if environment variable is not available
             print(f"Using credentials from file: {creds_file}")
+            if not os.path.exists(creds_file):
+                raise FileNotFoundError(f"Credentials file not found: {creds_file}")
             scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
             creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
             client = gspread.authorize(creds)
@@ -420,13 +428,16 @@ def create_new_sheet(spreadsheet_id, results):
 def get_all_sheets(spreadsheet_name_or_id):
     """Get all sheets from a Google Sheets document"""
     try:
-        # Special case for known spreadsheet name
-        if spreadsheet_name_or_id.lower() == "arondb":
+        # Special case for known spreadsheet name - case insensitive check
+        if isinstance(spreadsheet_name_or_id, str) and spreadsheet_name_or_id.lower() == "arondb":
             spreadsheet_name_or_id = "1EqsYq50pfSoZ5YM4AHKvqEUWT18CzCdgol6mWtRPTfU"
-            print(f"Using known spreadsheet ID: {spreadsheet_name_or_id}")
+            print(f"Converting 'ARONDB' to ID: {spreadsheet_name_or_id}")
         
         # Authenticate and get gspread client
         client = authenticate_google_sheets()
+        
+        # Print debugging info for spreadsheet ID
+        print(f"Attempting to open spreadsheet: {spreadsheet_name_or_id}")
         
         # Try to open by ID first
         try:

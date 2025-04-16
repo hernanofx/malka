@@ -59,8 +59,17 @@ def get_sheets(spreadsheet_name):
         
         # Print debugging information - this will show in Heroku logs
         app.logger.info(f"Fetching sheets for spreadsheet: {spreadsheet_name}")
-        app.logger.info(f"GOOGLE_CREDENTIALS environment variable exists: {bool(os.environ.get('GOOGLE_CREDENTIALS'))}")
-        app.logger.info(f"GOOGLE_CREDENTIALS length: {len(os.environ.get('GOOGLE_CREDENTIALS', ''))}")
+        has_credentials = bool(os.environ.get('GOOGLE_CREDENTIALS'))
+        app.logger.info(f"GOOGLE_CREDENTIALS environment variable exists: {has_credentials}")
+        if has_credentials:
+            creds_length = len(os.environ.get('GOOGLE_CREDENTIALS', ''))
+            app.logger.info(f"GOOGLE_CREDENTIALS length: {creds_length}")
+            # Verify JSON is valid
+            try:
+                json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
+                app.logger.info("GOOGLE_CREDENTIALS contains valid JSON")
+            except json.JSONDecodeError as e:
+                app.logger.error(f"GOOGLE_CREDENTIALS contains invalid JSON: {e}")
         
         # Handle direct spreadsheet URL case
         if spreadsheet_name.startswith('http'):
@@ -73,7 +82,7 @@ def get_sheets(spreadsheet_name):
                 spreadsheet_name = spreadsheet_id
         
         # Check if working with hardcoded spreadsheet name
-        if spreadsheet_name == "ARONDB":
+        if spreadsheet_name.lower() == "arondb":
             spreadsheet_name = "1EqsYq50pfSoZ5YM4AHKvqEUWT18CzCdgol6mWtRPTfU"
             app.logger.info(f"Using ARONDB spreadsheet ID: {spreadsheet_name}")
             

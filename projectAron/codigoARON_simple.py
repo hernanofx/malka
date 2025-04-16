@@ -659,15 +659,32 @@ def create_new_sheet(spreadsheet_id, results):
             data = [list(results.columns)] + results.values.tolist()
             
         new_sheet.append_rows(data, value_input_option='RAW')
-
-        # Return the new sheet URL
-        return new_sheet.url
+        
+        # Get the spreadsheet URL, but modify it to create a direct frontend link that works
+        spreadsheet_url = sheet.url
+        
+        # Check if URL contains '/d/'
+        if '/d/' in spreadsheet_url:
+            # Extract spreadsheet ID
+            parts = spreadsheet_url.split('/d/')
+            if len(parts) > 1:
+                id_part = parts[1].split('/')[0]
+                # Construct a Google Sheets frontend URL instead of API URL
+                frontend_url = f"https://docs.google.com/spreadsheets/d/{id_part}/edit#gid={new_sheet.id}"
+                print(f"Created frontend URL: {frontend_url}")
+                return frontend_url
+        
+        # If we can't parse the URL, try to create a more reliable URL format
+        direct_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid={new_sheet.id}"
+        print(f"Created direct URL: {direct_url}")
+        return direct_url
         
     except Exception as e:
         print(f"Error creating new sheet: {e}")
         import traceback
         traceback.print_exc()
-        raise
+        # Return a fallback URL in case of error
+        return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
 
 def get_all_sheets(spreadsheet_name_or_id):
     """Get all sheets from a Google Sheets document"""

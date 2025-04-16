@@ -1,0 +1,26 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+.env
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# No excluimos credenciales para asegurar que se despliegan a Heroku
+# credenciales.json
+# client_secrets.json
+
+# Temporary files
+temp_*.pdf
+temp_*.docx
+
+# IDE files
+.vscode/
+.idea/
+
+# Database
+*.db
+*.sqlite3

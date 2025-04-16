@@ -119,7 +119,8 @@ except ImportError:
             doc_term_matrix = []
             for text in texts:
                 term_counts = self._count_terms(text)
-                vector = [0] * len(self.vocabulary_)
+                vector = [0] * len(self.vocabulary_
+                )
                 for term, count in term_counts.items():
                     if term in self.vocabulary_:
                         vector[self.vocabulary_[term]] = count
@@ -141,24 +142,37 @@ except ImportError:
     
     TfidfVectorizer = SimpleTfidfVectorizer
 
-def authenticate_google_sheets(creds_file):
-    # Si estamos en Heroku, usar variables de entorno para las credenciales
+def authenticate_google_sheets(creds_file="credenciales.json"):
+    """
+    Authenticate with Google Sheets API using service account credentials.
+    Prioritizes environment variables over file credentials.
+    """
+    # Always check environment variables first, regardless of creds_file parameter
     if os.environ.get('GOOGLE_CREDENTIALS'):
-        # Crear archivo temporal con las credenciales
-        fd, temp_path = tempfile.mkstemp()
-        with os.fdopen(fd, 'w') as f:
-            f.write(os.environ.get('GOOGLE_CREDENTIALS'))
-        creds_file = temp_path
-
+        try:
+            # Create temporary file with credentials from environment variable
+            fd, temp_path = tempfile.mkstemp(suffix='.json')
+            with os.fdopen(fd, 'w') as f:
+                f.write(os.environ.get('GOOGLE_CREDENTIALS'))
+            
+            scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+            creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
+            client = gspread.authorize(creds)
+            
+            # Clean up the temporary file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                
+            return client
+        except Exception as e:
+            print(f"Error using credentials from environment variable: {e}")
+            # If this fails, we'll try the local file path next
+    
+    # Try using local file path as fallback
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
         client = gspread.authorize(creds)
-        
-        # Eliminar archivo temporal si fue creado
-        if os.environ.get('GOOGLE_CREDENTIALS') and os.path.exists(temp_path):
-            os.remove(temp_path)
-            
         return client
     except Exception as e:
         print(f"Error authenticating with Google Sheets: {e}")
@@ -167,9 +181,9 @@ def authenticate_google_sheets(creds_file):
 def download_file_from_drive(file_id, destination=None):
     """Descarga archivo desde Google Drive y retorna su contenido como texto"""
     try:
-        # Configurar credenciales desde variables de entorno o archivo
+        # Always check environment variables first for credentials
         if os.environ.get('GOOGLE_CREDENTIALS'):
-            fd, temp_path = tempfile.mkstemp()
+            fd, temp_path = tempfile.mkstemp(suffix='.json')
             with os.fdopen(fd, 'w') as f:
                 f.write(os.environ.get('GOOGLE_CREDENTIALS'))
             creds_file = temp_path

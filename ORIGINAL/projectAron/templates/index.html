@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidatos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Get Candidates</h1>
+        
+        <form id="candidates-form">
+            
+            <label for="spreadsheet_name">Database name:</label>
+            <input type="text" id="spreadsheet_name" name="spreadsheet_name" required>
+            
+            <label for="sheet_names">Select sheets:</label>
+            <select id="sheet_names" name="sheet_names" multiple required>
+                <!-- Las opciones serán añadidas dinámicamente -->
+            </select>
+
+            <label for="top_n">Number of Candidates (Top N):</label>
+            <input type="number" id="top_n" name="top_n" min="1" required>
+
+            <label for="job_description">Job Description:</label>
+            <textarea id="job_description" name="job_description" rows="6" required></textarea>
+
+            <button type="submit">Get Candidates</button>
+        </form>
+
+        <div id="result">
+            <!-- Aquí aparecerá la URL del resultado -->
+        </div>
+    </div>
+
+    <script>
+        // Cuando se cargue la página, obtener las hojas disponibles
+        window.onload = function() {
+            const spreadsheetNameInput = document.getElementById('spreadsheet_name');
+            const sheetNamesSelect = document.getElementById('sheet_names');
+            const resultDiv = document.getElementById('result');
+
+            // Escucha cuando el usuario ingresa un nombre de hoja de cálculo
+            spreadsheetNameInput.addEventListener('input', function() {
+                const spreadsheetName = spreadsheetNameInput.value.trim();
+                resultDiv.innerHTML = '';
+                // Si el campo de nombre de hoja de cálculo no está vacío, consulta las hojas
+                if (spreadsheetName) {
+                    // Llama al backend para obtener las hojas correspondientes a la base de datos
+                    fetch(`/get_sheets/${spreadsheetName}`)  // Usando la ruta dinámica
+                        .then(response => response.json())
+                        .then(data => {
+                            sheetNamesSelect.innerHTML = ''; // Limpiar opciones anteriores
+                            if (data.sheets && data.sheets.length > 0) {
+                                data.sheets.forEach(sheet => {
+                                    const option = document.createElement('option');
+                                    option.value = sheet;
+                                    option.textContent = sheet;
+                                    sheetNamesSelect.appendChild(option);
+                                });
+                            } else {
+                                // If no sheets are found, show error message
+                                resultDiv.innerHTML = "<p style='color: red;'>No sheets were found for this database.</p>";
+                            }
+                        })
+                        .catch(error => {
+                            resultDiv.innerHTML = `<p style='color: red;'>Error fetching sheets: ${error}</p>`;
+                        });
+                } else {
+                    // If the database name is empty, show error message
+                    sheetNamesSelect.innerHTML = ''; // Clear the options
+                    resultDiv.innerHTML = "<p style='color: red;'>Please enter a database name.</p>";
+                }
+            });
+        };
+
+
+        // Enviar el formulario para obtener los candidatos
+        document.getElementById('candidates-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('/get_candidates', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.url) {
+                    document.getElementById('result').innerHTML = `<p>The candidates have been processed. <a href="${data.url}" target="_blank">See the candidate sheet</a></p>`;
+                } else {
+                    document.getElementById('result').innerHTML = `<p>Error: ${data.error}</p>`;
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML = `<p>Error: ${error}</p>`;
+            });
+        });
+    </script>
+</body>
+</html>

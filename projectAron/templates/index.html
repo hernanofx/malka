@@ -21,16 +21,22 @@
         {% endif %}
         
         <div class="container">
-            <h1><i class="fas fa-brain"></i> AI Candidate Finder</h1>
+            <h1><i class="fas fa-brain"></i> Candidate Finder</h1>
             
             <form id="candidates-form">
                 <div class="form-group">
                     <label for="spreadsheet_name"><i class="fas fa-database"></i> Database name:</label>
                     <input type="text" id="spreadsheet_name" name="spreadsheet_name" required 
-                           placeholder="Enter your Google Sheet name" autocomplete="off">
+                           value="ARONDB" placeholder="Enter your Google Sheet name" autocomplete="off">
                     <div class="form-info-icon">
                         <i class="fas fa-info-circle"></i>
-                        <span class="form-info-tooltip">Enter the exact name of your Google Sheet document containing candidate data</span>
+                        <span class="form-info-tooltip">
+                            Using default database: ARONDB<br>
+                            <a href="https://docs.google.com/spreadsheets/d/1EqsYq50pfSoZ5YM4AHKvqEUWT18CzCdgol6mWtRPTfU/edit" 
+                               target="_blank" style="color: white; text-decoration: underline;">
+                               View Sheet Online
+                            </a>
+                        </span>
                     </div>
                 </div>
                 

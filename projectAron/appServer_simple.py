@@ -39,6 +39,7 @@ def login():
             session['user'] = email
             return redirect(url_for('index'))
         else:
+            app.logger.warning(f"Failed login attempt for email: {email}")
             return render_template('login.html', error='Invalid email or password')
     
     return render_template('login.html')
@@ -56,8 +57,18 @@ def get_sheets(spreadsheet_name):
         # Import here to avoid initial load issues
         from projectAron.codigoARON_simple import get_all_sheets
         
+        # Print debugging information - this will show in Heroku logs
+        app.logger.info(f"Fetching sheets for spreadsheet: {spreadsheet_name}")
+        app.logger.info(f"GOOGLE_CREDENTIALS environment variable exists: {bool(os.environ.get('GOOGLE_CREDENTIALS'))}")
+        
+        # Check if working with hardcoded spreadsheet ID
+        if spreadsheet_name == "ARONDB":
+            app.logger.info("Using standard ARONDB spreadsheet")
+            
         # Utilizar la función get_all_sheets para obtener las hojas
         sheet_names = get_all_sheets(spreadsheet_name)
+        
+        app.logger.info(f"Found sheets: {sheet_names}")
         
         if not sheet_names:
             return jsonify({"error": "No sheets found or access error."}), 400

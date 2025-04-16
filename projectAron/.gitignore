@@ -8,9 +8,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Sensitive data (rename your real credentials file before committing)
-credenciales.json
-client_secrets.json
+
 
 # Local development
 .env

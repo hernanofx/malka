@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "arondatabase",
+  "private_key_id": "6b0ce824bd40d3e7711afd69d2a830260432659e",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCZKBLyZ16KxvC1\n5FgB44zKH9doTufq/jb8sFSa2L1Nfdnr84GE6yH6mKbQbrqlRebVe2tPi6omOXLB\nS1lVWeDkLMYZN43553Ahz2/5SrX/v4/GrZ70jwRKg/ji0HE5ybsBkFTj6Br9EfQ9\nBH2wfCCcksavalTKB3IKkmdWeHzTY4DMiAyNMdAAvXaTJksQ+uiPaA3ylPTDS3by\nCd2F28OvzAlOHjoV0XQaQSvALZsE11tSNae3KF4mMShpqyDVDSa6X2FM/7yjHCOI\nTCT4f8HvG6tTPMYGjTv5MTRxyvZf8cyM7UjM+zC55cJypoJJ871vadD1GyW6p4ds\nDCl2hdN9AgMBAAECggEALWJ7Ltrj4LLwLK5kR/cCxvilj/Ll9bRsXffwskws2JRF\nKg7oIBe/Y2+t6xEM/SHYNAXVOGa2PoqCj3YBHHI8WtFLyLg2OcpT56j9UP3LLeS5\nudHES0tAJcayz5+eFdZKNL3s8fZbXQfffN9iUZSO42b5Oo0DYDTRngFhXvXoY4lh\nB/uXggQmJBZCiXvPe2j2haOFkyiv9ayMZiC4lY/pTHuNkkyKk5Idb375g6M1lmXI\nbQw94usdpuSJDDJzNMU7jHln5MOYehau6K905LlZtKwhp4B+dHeulQpr6efSRSIc\nx8XZS3hinCUzLXEd0+0pL4FeqW68FpHhOhmdjepQXwKBgQDJaLWV5UQQ8ti6RO/Z\nG/RloOw5NEm31wRYcubxTh6XjzKcAvGW6O27DxziicVlGAXfaZ0IDLSD4dQE6zJ2\n/g80TEeRv0EghFvn90+Cv6N8DGcJ7VDTnXyZ/WjAgLj5S1rY9+pmJ54umFgcizLC\nm9l7s+/z+mZEm3PM2+W5H0MAewKBgQDCqz2Do4YblqNCWyp7pJi07DqhW5PSo4Ub\nNJWW9bKMr755XRmu87J36Pmuimmk/qe51u/PWXMPjhF2PZpe9qSENot9nMq6O1qH\nA9RqHguOvDx5A3NYib3AJ3ELRCBp9sKtWaUJG05w84fy/zIPPum52BLTBeEvAo7g\nxW8EP51GZwKBgCmw8RWsNaDEhDRanMN2U+rNmthkiHXznkSo1EFTCGYbEEDXIyc3\n5C36fOIv3pqElIKgnA7UgnFiR78U6IdVI9SRjacPze1rOJMV0HGiNbcx4gpeA4Mq\ncGZ33D0s6B1CifWrq+ule8rtYh/WeJVsKWK/5oW8aXr+KsRXKIBfhkENAoGAMpmm\nPLBlrIgkWZwu18K5+tUojEasjuT4NVEezQWCarVH0m4TvfkUW7zQIcFSopOa72Bi\nJ0h98v4fpddvZ92+d6th6L23qF7DMjMZpJe4s1pUcbQm6E2tZ+QYqzADKOf+RGb3\n0f0qD4wNu2kADxxwTmFOy1FM7hZBI0XOjJEohWMCgYEAqQVlkbQbRQb9uvLUgA+d\nHRvf6d5+hmrNNNH/wtPeZRosVaS3EeboB0xzJVGQdFSNyeXKnvdiI2rUB1CKJu4e\n7hVE1TuPgAhLfzNamTudDw+d9YtA5tFGIH8J3/amfwfXqdj8jbP1dIEGcCyDe618\nZ1C0iAetiMjDd0edbPb7qpM=\n-----END PRIVATE KEY-----\n",
+  "client_email": "arondatabase@arondatabase.iam.gserviceaccount.com",
+  "client_id": "114816025559621710215",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/arondatabase%40arondatabase.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

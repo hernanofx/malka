@@ -319,6 +319,12 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
 def download_file_from_drive(file_id, destination=None):
     """Download file from Google Drive and return its content as text"""
     try:
+        if not file_id:
+            print("No file ID provided")
+            return ""
+            
+        print(f"Attempting to download file with ID: {file_id}")
+        
         # Use the same authentication method as authenticate_google_sheets
         client = authenticate_google_sheets()
         
@@ -348,8 +354,31 @@ def download_file_from_drive(file_id, destination=None):
         service = build('drive', 'v3', credentials=creds)
         
         # Get file metadata
-        file_metadata = service.files().get(fileId=file_id).execute()
-        mime_type = file_metadata.get("mimeType", "")
+        try:
+            file_metadata = service.files().get(fileId=file_id).execute()
+            print(f"Successfully retrieved metadata for file: {file_id}")
+            mime_type = file_metadata.get("mimeType", "")
+            print(f"File mime type: {mime_type}")
+        except Exception as e:
+            print(f"Error retrieving file metadata: {e}")
+            # If we get a 403 permission denied error, return a specific message
+            if "403" in str(e) or "permission" in str(e).lower():
+                print("Permission denied error. This is often because:")
+                print("1. The service account email doesn't have access to the file")
+                print("2. The file hasn't been shared with the service account")
+                
+                # Get service account email from credentials
+                if os.environ.get('GOOGLE_CREDENTIALS'):
+                    try:
+                        json_creds = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
+                        if 'client_email' in json_creds:
+                            print(f"Service account email: {json_creds['client_email']}")
+                            print(f"Make sure to share the file with this email address")
+                    except:
+                        pass
+                        
+                return "[No se puede acceder al archivo. Verifique permisos del servicio.]"
+            return ""
         
         # Initialize download request based on mime type
         request = None
@@ -372,7 +401,14 @@ def download_file_from_drive(file_id, destination=None):
         
         done = False
         while not done:
-            _, done = downloader.next_chunk()
+            try:
+                _, done = downloader.next_chunk()
+            except Exception as e:
+                print(f"Error downloading file chunk: {e}")
+                # If permission error, give specific message
+                if "403" in str(e) or "permission" in str(e).lower():
+                    return "[No se puede acceder al archivo. Verifique permisos del servicio.]"
+                return ""
         
         file_content.seek(0)
         
@@ -422,6 +458,9 @@ def download_file_from_drive(file_id, destination=None):
         print(f"Error downloading file: {e}")
         import traceback
         traceback.print_exc()
+        # If permission error, give clear user message
+        if "403" in str(e) or "permission" in str(e).lower():
+            return "[No se puede acceder al archivo. Verifique permisos.]"
         return ""
 
 def get_candidates(spreadsheet_name, sheet_names, job_description, top_n):

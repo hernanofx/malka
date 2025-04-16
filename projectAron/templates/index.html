@@ -96,16 +96,30 @@
             const loaderDiv = document.getElementById('loader');
             const findBtn = document.getElementById('find-btn');
 
+            // Función para extraer el ID de una URL de Google Sheets
+            function extractSheetId(value) {
+                if (value.includes('docs.google.com/spreadsheets')) {
+                    const match = value.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                    if (match && match[1]) {
+                        return match[1];
+                    }
+                }
+                return value; // Return the original value if it's not a URL or we can't extract an ID
+            }
+
             // Función para solicitar las hojas disponibles
             function fetchSheets(spreadsheetId) {
+                // Extract ID from URL if it's a Google Sheets URL
+                const extractedId = extractSheetId(spreadsheetId);
+                
                 sheetNamesSelect.disabled = true;
                 sheetNamesSelect.innerHTML = '<option disabled>Loading sheets...</option>';
                 
                 // Show loader
                 loaderDiv.style.display = 'block';
                 
-                // Try to fetch sheets immediately after page load with default value
-                fetch(`/get_sheets/${spreadsheetId}`)
+                // Try to fetch sheets with the extracted ID
+                fetch(`/get_sheets/${extractedId}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('Network response was not ok');
@@ -172,61 +186,69 @@
             findBtn.addEventListener('mouseout', function() {
                 this.classList.remove('pulse');
             });
-        };
 
-        // Enviar el formulario para obtener los candidatos
-        document.getElementById('candidates-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            
-            const resultDiv = document.getElementById('result');
-            const loaderDiv = document.getElementById('loader');
-            const findBtn = document.getElementById('find-btn');
-            
-            // Disable button and change text
-            findBtn.disabled = true;
-            findBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-            
-            // Show loader and clear previous results
-            loaderDiv.style.display = 'block';
-            resultDiv.innerHTML = '';
-            resultDiv.className = '';
-            
-            const formData = new FormData(this);
-            
-            fetch('/get_candidates', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Server error: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                loaderDiv.style.display = 'none';
-                findBtn.disabled = false;
-                findBtn.innerHTML = '<i class="fas fa-search"></i> Find Matching Candidates';
+            // Submit form handler - update to extract spreadsheet ID if it's a URL
+            document.getElementById('candidates-form').addEventListener('submit', function(event) {
+                event.preventDefault();
                 
-                if (data.url) {
-                    resultDiv.innerHTML = `
-                        <p><i class='fas fa-check-circle'></i> Success! The AI has identified the best matching candidates.</p>
-                        <a href="${data.url}" target="_blank">View Candidate Results <i class='fas fa-external-link-alt'></i></a>
-                    `;
-                    resultDiv.className = 'success-result';
-                } else {
-                    resultDiv.innerHTML = `<p><i class='fas fa-exclamation-triangle'></i> Error: ${data.error}</p>`;
-                    resultDiv.className = 'error-result';
+                // Extract spreadsheet ID if it's a URL
+                const spreadsheetInput = document.getElementById('spreadsheet_name');
+                const extractedId = extractSheetId(spreadsheetInput.value.trim());
+                if (extractedId !== spreadsheetInput.value.trim()) {
+                    spreadsheetInput.value = extractedId;
+                    console.log("Extracted spreadsheet ID:", extractedId);
                 }
-            })
-            .catch(error => {
-                loaderDiv.style.display = 'none';
-                findBtn.disabled = false;
-                findBtn.innerHTML = '<i class="fas fa-search"></i> Find Matching Candidates';
-                resultDiv.innerHTML = `<p><i class='fas fa-exclamation-triangle'></i> Error: ${error.message}</p>`;
-                resultDiv.className = 'error-result';
+                
+                const resultDiv = document.getElementById('result');
+                const loaderDiv = document.getElementById('loader');
+                const findBtn = document.getElementById('find-btn');
+                
+                // Disable button and change text
+                findBtn.disabled = true;
+                findBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                
+                // Show loader and clear previous results
+                loaderDiv.style.display = 'block';
+                resultDiv.innerHTML = '';
+                resultDiv.className = '';
+                
+                const formData = new FormData(this);
+                
+                fetch('/get_candidates', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Server error: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    loaderDiv.style.display = 'none';
+                    findBtn.disabled = false;
+                    findBtn.innerHTML = '<i class="fas fa-search"></i> Find Matching Candidates';
+                    
+                    if (data.url) {
+                        resultDiv.innerHTML = `
+                            <p><i class='fas fa-check-circle'></i> Success! The AI has identified the best matching candidates.</p>
+                            <a href="${data.url}" target="_blank">View Candidate Results <i class='fas fa-external-link-alt'></i></a>
+                        `;
+                        resultDiv.className = 'success-result';
+                    } else {
+                        resultDiv.innerHTML = `<p><i class='fas fa-exclamation-triangle'></i> Error: ${data.error}</p>`;
+                        resultDiv.className = 'error-result';
+                    }
+                })
+                .catch(error => {
+                    loaderDiv.style.display = 'none';
+                    findBtn.disabled = false;
+                    findBtn.innerHTML = '<i class="fas fa-search"></i> Find Matching Candidates';
+                    resultDiv.innerHTML = `<p><i class='fas fa-exclamation-triangle'></i> Error: ${error.message}</p>`;
+                    resultDiv.className = 'error-result';
+                });
             });
-        });
+        };
     </script>
 </body>
 </html>

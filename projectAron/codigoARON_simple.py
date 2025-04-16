@@ -147,33 +147,39 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
     Authenticate with Google Sheets API using service account credentials.
     Prioritizes environment variables over file credentials.
     """
-    # Always check environment variables first, regardless of creds_file parameter
-    if os.environ.get('GOOGLE_CREDENTIALS'):
-        try:
-            # Create temporary file with credentials from environment variable
+    try:
+        # Check for credentials in environment variables first
+        if os.environ.get('GOOGLE_CREDENTIALS'):
+            print("Using credentials from environment variable")
+            # Create a temporary file with credentials from environment variable
             fd, temp_path = tempfile.mkstemp(suffix='.json')
             with os.fdopen(fd, 'w') as f:
                 f.write(os.environ.get('GOOGLE_CREDENTIALS'))
             
+            # Use the temporary file for authentication
             scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-            creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
-            client = gspread.authorize(creds)
-            
-            # Clean up the temporary file
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            try:
+                creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
+                client = gspread.authorize(creds)
                 
+                # Clean up the temporary file after use
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                    
+                return client
+            except Exception as e:
+                print(f"Error using credentials from environment variable: {e}")
+                # Clean up in case of error
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                raise
+        else:
+            # Only try file-based authentication if environment variable is not available
+            print(f"Using credentials from file: {creds_file}")
+            scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+            creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
+            client = gspread.authorize(creds)
             return client
-        except Exception as e:
-            print(f"Error using credentials from environment variable: {e}")
-            # If this fails, we'll try the local file path next
-    
-    # Try using local file path as fallback
-    try:
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
-        client = gspread.authorize(creds)
-        return client
     except Exception as e:
         print(f"Error authenticating with Google Sheets: {e}")
         raise
@@ -372,8 +378,19 @@ def get_candidates(spreadsheet_name, sheet_names, job_description, top_n):
 
 def create_new_sheet(spreadsheet_id, results):
     try:
-        client = authenticate_google_sheets("credenciales.json")
-        sheet = client.open(spreadsheet_id)
+        # Special case for known spreadsheet ID
+        if spreadsheet_id == "ARONDB":
+            spreadsheet_id = "1EqsYq50pfSoZ5YM4AHKvqEUWT18CzCdgol6mWtRPTfU"
+            print(f"Using known spreadsheet ID: {spreadsheet_id}")
+            
+        client = authenticate_google_sheets()
+        
+        # Try to open by ID first
+        try:
+            sheet = client.open_by_key(spreadsheet_id)
+        except Exception as e:
+            print(f"Couldn't open by key, trying by name: {e}")
+            sheet = client.open(spreadsheet_id)
 
         # Verificar si la hoja 'Candidates' ya existe
         existing_sheets = sheet.worksheets()
@@ -407,15 +424,30 @@ def create_new_sheet(spreadsheet_id, results):
         traceback.print_exc()
         raise
 
-def get_all_sheets(spreadsheet_name):
+def get_all_sheets(spreadsheet_name_or_id):
     """Obtiene todas las hojas de un Google Sheets"""
     try:
+        # Special case for known spreadsheet ID
+        if spreadsheet_name_or_id == "ARONDB":
+            spreadsheet_name_or_id = "1EqsYq50pfSoZ5YM4AHKvqEUWT18CzCdgol6mWtRPTfU"
+            print(f"Using known spreadsheet ID: {spreadsheet_name_or_id}")
+        
         # Autenticarse y obtener el cliente de gspread
-        client = authenticate_google_sheets("credenciales.json")
-        sheets = client.open(spreadsheet_name).worksheets()
+        client = authenticate_google_sheets()
+        
+        # Try to open by ID first
+        try:
+            sheet = client.open_by_key(spreadsheet_name_or_id)
+        except Exception as e:
+            print(f"Couldn't open by key, trying by name: {e}")
+            sheet = client.open(spreadsheet_name_or_id)
+        
+        # Obtener las hojas
+        sheets = sheet.worksheets()
         
         # Obtener los nombres de las hojas
         sheet_names = [sheet.title for sheet in sheets]
+        print(f"Found sheets: {sheet_names}")
 
         return sheet_names
         

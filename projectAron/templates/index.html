@@ -27,11 +27,11 @@
                 <div class="form-group">
                     <label for="spreadsheet_name"><i class="fas fa-database"></i> Database name:</label>
                     <input type="text" id="spreadsheet_name" name="spreadsheet_name" required 
-                           value="ARONDB" placeholder="Enter your Google Sheet name" autocomplete="off">
+                           value="1EqsYq50pfSoZ5YM4AHKvqEUWT18CzCdgol6mWtRPTfU" placeholder="Enter Google Sheet ID or name" autocomplete="off">
                     <div class="form-info-icon">
                         <i class="fas fa-info-circle"></i>
                         <span class="form-info-tooltip">
-                            Using default database: ARONDB<br>
+                            Using default spreadsheet ID for ARONDB<br>
                             <a href="https://docs.google.com/spreadsheets/d/1EqsYq50pfSoZ5YM4AHKvqEUWT18CzCdgol6mWtRPTfU/edit" 
                                target="_blank" style="color: white; text-decoration: underline;">
                                View Sheet Online
@@ -96,6 +96,56 @@
             const loaderDiv = document.getElementById('loader');
             const findBtn = document.getElementById('find-btn');
 
+            // Función para solicitar las hojas disponibles
+            function fetchSheets(spreadsheetId) {
+                sheetNamesSelect.disabled = true;
+                sheetNamesSelect.innerHTML = '<option disabled>Loading sheets...</option>';
+                
+                // Show loader
+                loaderDiv.style.display = 'block';
+                
+                // Try to fetch sheets immediately after page load with default value
+                fetch(`/get_sheets/${spreadsheetId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        loaderDiv.style.display = 'none';
+                        sheetNamesSelect.disabled = false;
+                        sheetNamesSelect.innerHTML = ''; // Limpiar opciones anteriores
+                        
+                        if (data.sheets && data.sheets.length > 0) {
+                            data.sheets.forEach(sheet => {
+                                const option = document.createElement('option');
+                                option.value = sheet;
+                                option.textContent = sheet;
+                                sheetNamesSelect.appendChild(option);
+                            });
+                            
+                            // Select first option by default
+                            sheetNamesSelect.options[0].selected = true;
+                        } else {
+                            // If no sheets are found, show error message
+                            resultDiv.innerHTML = "<p><i class='fas fa-exclamation-triangle'></i> No sheets were found for this database.</p>";
+                            resultDiv.className = 'error-result';
+                            sheetNamesSelect.innerHTML = '<option disabled>No sheets available</option>';
+                        }
+                    })
+                    .catch(error => {
+                        loaderDiv.style.display = 'none';
+                        sheetNamesSelect.disabled = false;
+                        resultDiv.innerHTML = `<p><i class='fas fa-exclamation-triangle'></i> Error fetching sheets: ${error.message}</p>`;
+                        resultDiv.className = 'error-result';
+                        sheetNamesSelect.innerHTML = '<option disabled>Error loading sheets</option>';
+                    });
+            }
+
+            // Try to load sheets immediately with the default spreadsheet ID
+            fetchSheets(spreadsheetNameInput.value.trim());
+
             // Escucha cuando el usuario ingresa un nombre de hoja de cálculo
             spreadsheetNameInput.addEventListener('input', function() {
                 const spreadsheetName = spreadsheetNameInput.value.trim();
@@ -104,49 +154,7 @@
                 
                 // Si el campo de nombre de hoja de cálculo no está vacío, consulta las hojas
                 if (spreadsheetName) {
-                    sheetNamesSelect.disabled = true;
-                    sheetNamesSelect.innerHTML = '<option disabled>Loading sheets...</option>';
-                    
-                    // Show loader
-                    loaderDiv.style.display = 'block';
-                    
-                    // Llama al backend para obtener las hojas correspondientes a la base de datos
-                    fetch(`/get_sheets/${spreadsheetName}`)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Network response was not ok');
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            loaderDiv.style.display = 'none';
-                            sheetNamesSelect.disabled = false;
-                            sheetNamesSelect.innerHTML = ''; // Limpiar opciones anteriores
-                            
-                            if (data.sheets && data.sheets.length > 0) {
-                                data.sheets.forEach(sheet => {
-                                    const option = document.createElement('option');
-                                    option.value = sheet;
-                                    option.textContent = sheet;
-                                    sheetNamesSelect.appendChild(option);
-                                });
-                                
-                                // Select first option by default
-                                sheetNamesSelect.options[0].selected = true;
-                            } else {
-                                // If no sheets are found, show error message
-                                resultDiv.innerHTML = "<p><i class='fas fa-exclamation-triangle'></i> No sheets were found for this database.</p>";
-                                resultDiv.className = 'error-result';
-                                sheetNamesSelect.innerHTML = '<option disabled>No sheets available</option>';
-                            }
-                        })
-                        .catch(error => {
-                            loaderDiv.style.display = 'none';
-                            sheetNamesSelect.disabled = false;
-                            resultDiv.innerHTML = `<p><i class='fas fa-exclamation-triangle'></i> Error fetching sheets: ${error.message}</p>`;
-                            resultDiv.className = 'error-result';
-                            sheetNamesSelect.innerHTML = '<option disabled>Error loading sheets</option>';
-                        });
+                    fetchSheets(spreadsheetName);
                 } else {
                     // If the database name is empty, show error message
                     sheetNamesSelect.innerHTML = '<option disabled>Enter database name first</option>';

@@ -60,10 +60,22 @@ def get_sheets(spreadsheet_name):
         # Print debugging information - this will show in Heroku logs
         app.logger.info(f"Fetching sheets for spreadsheet: {spreadsheet_name}")
         app.logger.info(f"GOOGLE_CREDENTIALS environment variable exists: {bool(os.environ.get('GOOGLE_CREDENTIALS'))}")
+        app.logger.info(f"GOOGLE_CREDENTIALS length: {len(os.environ.get('GOOGLE_CREDENTIALS', ''))}")
         
-        # Check if working with hardcoded spreadsheet ID
+        # Handle direct spreadsheet URL case
+        if spreadsheet_name.startswith('http'):
+            # Extract ID from URL if it's a Google Sheets URL
+            import re
+            match = re.search(r'/d/([a-zA-Z0-9-_]+)', spreadsheet_name)
+            if match:
+                spreadsheet_id = match.group(1)
+                app.logger.info(f"Extracted spreadsheet ID from URL: {spreadsheet_id}")
+                spreadsheet_name = spreadsheet_id
+        
+        # Check if working with hardcoded spreadsheet name
         if spreadsheet_name == "ARONDB":
-            app.logger.info("Using standard ARONDB spreadsheet")
+            spreadsheet_name = "1EqsYq50pfSoZ5YM4AHKvqEUWT18CzCdgol6mWtRPTfU"
+            app.logger.info(f"Using ARONDB spreadsheet ID: {spreadsheet_name}")
             
         # Utilizar la función get_all_sheets para obtener las hojas
         sheet_names = get_all_sheets(spreadsheet_name)

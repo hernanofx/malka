@@ -184,25 +184,37 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
                     if 'client_email' in json_creds:
                         print(f"Client email: {json_creds['client_email']}")
                     
-                    # Verificar la clave privada
+                    # Verificar y corregir la clave privada
                     if 'private_key' in json_creds:
                         private_key = json_creds['private_key']
+                        # Verificar si la clave privada contiene los marcadores correctos
                         if "-----BEGIN PRIVATE KEY-----" in private_key and "-----END PRIVATE KEY-----" in private_key:
                             print("✅ Formato de clave privada válido")
                         else:
                             print("⚠️ El formato de la clave privada puede ser incorrecto")
-                            # Intentar arreglar problemas comunes con la clave privada
-                            if '\\n' in private_key and '\n' not in private_key:
-                                print("Corrigiendo '\\n' en clave privada")
-                                private_key = private_key.replace('\\n', '\n')
-                                json_creds['private_key'] = private_key
+                            
+                        # Corregir problemas comunes con '\n' literales en la clave privada
+                        if '\\n' in private_key and '\n' not in private_key:
+                            print("Corrigiendo '\\n' en clave privada")
+                            private_key = private_key.replace('\\n', '\n')
+                            json_creds['private_key'] = private_key
                     
-                    # Autenticar con las credenciales
+                    # Autenticar con las credenciales corregidas
                     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-                    creds = ServiceAccountCredentials.from_json_keyfile_dict(json_creds, scope)
-                    client = gspread.authorize(creds)
-                    print("✅ Autenticado exitosamente usando GOOGLE_CREDENTIALS")
-                    return client
+                    
+                    try:
+                        # Intentar usar la biblioteca google.oauth2 si está disponible (más moderna)
+                        from google.oauth2.service_account import Credentials
+                        creds = Credentials.from_service_account_info(json_creds, scopes=scope)
+                        client = gspread.authorize(creds)
+                        print("✅ Autenticado exitosamente usando google.oauth2.service_account.Credentials")
+                        return client
+                    except ImportError:
+                        # Fallback a oauth2client
+                        creds = ServiceAccountCredentials.from_json_keyfile_dict(json_creds, scope)
+                        client = gspread.authorize(creds)
+                        print("✅ Autenticado exitosamente usando oauth2client.service_account.ServiceAccountCredentials")
+                        return client
                     
                 except json.JSONDecodeError as e:
                     print(f"❌ Error al parsear JSON: {str(e)}")
@@ -233,11 +245,40 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
             if os.path.exists(creds_path):
                 print(f"✅ Archivo existe: {creds_path}")
                 try:
+                    # Leer y verificar el contenido del archivo para corregir problemas potenciales
+                    with open(creds_path, 'r') as f:
+                        json_content = json.load(f)
+                    
+                    # Verificar y corregir formato de private_key
+                    if 'private_key' in json_content:
+                        private_key = json_content['private_key']
+                        if '\\n' in private_key and '\n' not in private_key:
+                            print("Corrigiendo '\\n' en clave privada")
+                            private_key = private_key.replace('\\n', '\n')
+                            json_content['private_key'] = private_key
+                            
+                            # Escribir archivo corregido
+                            with open(creds_path, 'w') as f:
+                                json.dump(json_content, f)
+                                print("Archivo de credenciales corregido y guardado")
+                    
+                    # Intentar autenticar con el archivo potencialmente corregido
                     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-                    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
-                    client = gspread.authorize(creds)
-                    print("✅ Autenticado exitosamente usando GOOGLE_APPLICATION_CREDENTIALS")
-                    return client
+                    
+                    try:
+                        # Intentar usar la biblioteca google.oauth2 si está disponible
+                        from google.oauth2.service_account import Credentials
+                        creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+                        client = gspread.authorize(creds)
+                        print("✅ Autenticado exitosamente usando google.oauth2 desde archivo")
+                        return client
+                    except ImportError:
+                        # Fallback a oauth2client
+                        creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+                        client = gspread.authorize(creds)
+                        print("✅ Autenticado exitosamente usando GOOGLE_APPLICATION_CREDENTIALS")
+                        return client
+                        
                 except Exception as e:
                     print(f"❌ Error usando archivo de GOOGLE_APPLICATION_CREDENTIALS: {str(e)}")
                     traceback.print_exc()
@@ -253,11 +294,37 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
             
             if temp_path and os.path.exists(temp_path):
                 print(f"✅ Archivo temporal creado: {temp_path}")
+                # Leer y verificar el contenido del archivo
+                with open(temp_path, 'r') as f:
+                    json_content = json.load(f)
+                
+                # Verificar y corregir formato de private_key si es necesario
+                if 'private_key' in json_content:
+                    private_key = json_content['private_key']
+                    if '\\n' in private_key and '\n' not in private_key:
+                        print("Corrigiendo '\\n' en clave privada del archivo temporal")
+                        private_key = private_key.replace('\\n', '\n')
+                        json_content['private_key'] = private_key
+                        
+                        # Escribir archivo corregido
+                        with open(temp_path, 'w') as f:
+                            json.dump(json_content, f)
+                
                 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-                creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
-                client = gspread.authorize(creds)
-                print("✅ Autenticado exitosamente usando config.setup_credentials()")
-                return client
+                
+                try:
+                    # Intentar usar la biblioteca google.oauth2 si está disponible
+                    from google.oauth2.service_account import Credentials
+                    creds = Credentials.from_service_account_file(temp_path, scopes=scope)
+                    client = gspread.authorize(creds)
+                    print("✅ Autenticado exitosamente usando google.oauth2 desde config")
+                    return client
+                except ImportError:
+                    # Fallback a oauth2client
+                    creds = ServiceAccountCredentials.from_json_keyfile_name(temp_path, scope)
+                    client = gspread.authorize(creds)
+                    print("✅ Autenticado exitosamente usando config.setup_credentials()")
+                    return client
             else:
                 print("❌ No se pudo crear archivo temporal con config.setup_credentials()")
         except ImportError:
@@ -271,11 +338,37 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
         if os.path.exists(creds_file):
             print(f"✅ Archivo existe: {creds_file}")
             try:
+                # Leer y verificar el contenido del archivo
+                with open(creds_file, 'r') as f:
+                    json_content = json.load(f)
+                
+                # Verificar y corregir formato de private_key
+                if 'private_key' in json_content:
+                    private_key = json_content['private_key']
+                    if '\\n' in private_key and '\n' not in private_key:
+                        print("Corrigiendo '\\n' en clave privada del archivo local")
+                        private_key = private_key.replace('\\n', '\n')
+                        json_content['private_key'] = private_key
+                        
+                        # Escribir archivo corregido
+                        with open(creds_file, 'w') as f:
+                            json.dump(json_content, f)
+                
                 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-                creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
-                client = gspread.authorize(creds)
-                print(f"✅ Autenticado exitosamente usando archivo local: {creds_file}")
-                return client
+                
+                try:
+                    # Intentar usar la biblioteca google.oauth2 si está disponible
+                    from google.oauth2.service_account import Credentials
+                    creds = Credentials.from_service_account_file(creds_file, scopes=scope)
+                    client = gspread.authorize(creds)
+                    print("✅ Autenticado exitosamente usando google.oauth2 desde archivo local")
+                    return client
+                except ImportError:
+                    # Fallback a oauth2client
+                    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
+                    client = gspread.authorize(creds)
+                    print(f"✅ Autenticado exitosamente usando archivo local: {creds_file}")
+                    return client
             except Exception as e:
                 print(f"❌ Error usando archivo local: {str(e)}")
                 traceback.print_exc()
@@ -291,11 +384,37 @@ def authenticate_google_sheets(creds_file="credenciales.json"):
             
             if os.path.exists(script_creds_file):
                 print(f"✅ Archivo existe: {script_creds_file}")
+                # Leer y verificar el contenido del archivo
+                with open(script_creds_file, 'r') as f:
+                    json_content = json.load(f)
+                
+                # Verificar y corregir formato de private_key
+                if 'private_key' in json_content:
+                    private_key = json_content['private_key']
+                    if '\\n' in private_key and '\n' not in private_key:
+                        print("Corrigiendo '\\n' en clave privada del archivo en directorio del script")
+                        private_key = private_key.replace('\\n', '\n')
+                        json_content['private_key'] = private_key
+                        
+                        # Escribir archivo corregido
+                        with open(script_creds_file, 'w') as f:
+                            json.dump(json_content, f)
+                
                 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-                creds = ServiceAccountCredentials.from_json_keyfile_name(script_creds_file, scope)
-                client = gspread.authorize(creds)
-                print(f"✅ Autenticado exitosamente usando archivo en directorio del script: {script_creds_file}")
-                return client
+                
+                try:
+                    # Intentar usar la biblioteca google.oauth2 si está disponible
+                    from google.oauth2.service_account import Credentials
+                    creds = Credentials.from_service_account_file(script_creds_file, scopes=scope)
+                    client = gspread.authorize(creds)
+                    print("✅ Autenticado exitosamente usando google.oauth2 desde directorio del script")
+                    return client
+                except ImportError:
+                    # Fallback a oauth2client
+                    creds = ServiceAccountCredentials.from_json_keyfile_name(script_creds_file, scope)
+                    client = gspread.authorize(creds)
+                    print(f"✅ Autenticado exitosamente usando archivo en directorio del script: {script_creds_file}")
+                    return client
             else:
                 print(f"❌ Archivo no existe: {script_creds_file}")
         except Exception as e:
